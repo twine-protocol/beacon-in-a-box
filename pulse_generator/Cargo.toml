@@ -1,0 +1,11 @@
+[package]
+name = "pulse_generator"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "pulse_generator"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.43.0", features = ["full"] }
