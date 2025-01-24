@@ -5,7 +5,6 @@ RUN cargo install cargo-chef
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY pulse_generator/Cargo.toml ./pulse_generator/
-COPY rng_factory/Cargo.toml ./rng_factory/
 COPY biab_utils/Cargo.toml ./biab_utils/
 
 RUN cargo chef prepare --recipe-path recipe.json

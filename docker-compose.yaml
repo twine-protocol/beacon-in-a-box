@@ -13,20 +13,5 @@ services:
     networks:
       - internal
 
-  # rng_factory:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.base
-  #     args:
-  #       - APP_NAME=rng_factory
-  #   environment:
-  #     - LOG_LEVEL=debug
-  #     - RNG_SCRIPT_PATH=/app/python_example/get_randomness.py
-  #   command: ["/app/rng_factory"]
-  #   networks:
-  #     - internal
-  #   depends_on:
-  #     - generator
-
 networks:
   internal:
