@@ -8,4 +8,6 @@ name = "pulse_generator"
 path = "src/main.rs"
 
 [dependencies]
+biab_utils = { path = "../biab_utils" }
 tokio = { version = "1.43.0", features = ["full"] }
+log = "0.4.25"

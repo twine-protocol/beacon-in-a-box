@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile.base
       args:
         - APP_NAME=pulse_generator
+    environment:
+      - LOG_LEVEL=debug
     command: ["/app/pulse_generator"]
     networks:
       - internal
@@ -15,6 +17,8 @@ services:
       dockerfile: Dockerfile.base
       args:
         - APP_NAME=rng_factory
+    environment:
+      - LOG_LEVEL=debug
     command: ["/app/rng_factory"]
     networks:
       - internal
