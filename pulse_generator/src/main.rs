@@ -35,6 +35,7 @@ async fn start_scheduler(shutdown: Arc<Notify>) -> Result<()> {
   // Run the scheduler
   scheduler.start().await?;
 
+  // Wait for shutdown signal
   shutdown.notified().await;
   log::info!("Stopping tasks...");
   scheduler.shutdown().await?;
