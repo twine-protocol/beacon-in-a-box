@@ -1,8 +1,8 @@
 services:
   generator:
     build:
-      context: ./pulse_generator
-      dockerfile: ../Dockerfile.base
+      context: .
+      dockerfile: Dockerfile.base
       args:
         - APP_NAME=pulse_generator
     command: ["/app/pulse_generator"]
@@ -11,8 +11,8 @@ services:
 
   rng_factory:
     build:
-      context: ./rng_factory
-      dockerfile: ../Dockerfile.base
+      context: .
+      dockerfile: Dockerfile.base
       args:
         - APP_NAME=rng_factory
     command: ["/app/rng_factory"]

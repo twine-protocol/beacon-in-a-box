@@ -1,16 +1,36 @@
 # Use the shared base image
+FROM rust:bookworm AS chef
+# Copy source code
+WORKDIR /app
+
+# Cache dependencies
+RUN cargo install cargo-chef
+
+COPY Cargo.toml Cargo.lock ./
+COPY pulse_generator/Cargo.toml ./pulse_generator/
+COPY rng_factory/Cargo.toml ./rng_factory/
+
+RUN cargo chef prepare --recipe-path recipe.json
+
 FROM rust:bookworm AS builder
+WORKDIR /app
+RUN cargo install cargo-chef
+COPY --from=chef /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
 ARG APP_NAME=app
 ENV APP_NAME ${APP_NAME}
 
 # Copy source code
-WORKDIR /app
 COPY . .
 
-# Build the binary
-RUN cargo build --release
+RUN cargo build --release --bin ${APP_NAME}
 
 # Final runtime image
 FROM debian:bookworm-slim AS runtime
+ARG APP_NAME=app
+ENV APP_NAME ${APP_NAME}
 WORKDIR /app
-COPY --from=builder /app/target/release/${APP_NAME} /app/
+COPY --from=builder /app/target/release/${APP_NAME} /app/${APP_NAME}
+
+CMD ["/app/${APP_NAME}"]
