@@ -1,0 +1,16 @@
+# Use the shared base image
+FROM rust:bookworm AS builder
+ARG APP_NAME=app
+ENV APP_NAME ${APP_NAME}
+
+# Copy source code
+WORKDIR /app
+COPY . .
+
+# Build the binary
+RUN cargo build --release
+
+# Final runtime image
+FROM debian:bookworm-slim AS runtime
+WORKDIR /app
+COPY --from=builder /app/target/release/${APP_NAME} /app/

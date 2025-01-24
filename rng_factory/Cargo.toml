@@ -1,0 +1,12 @@
+[package]
+name = "rng_factory"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rng_factory"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.43.0", features = ["full"] }
+

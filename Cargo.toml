@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "./pulse_generator",
+  "./rng_factory",
+]
+
