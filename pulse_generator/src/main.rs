@@ -1,94 +1,67 @@
+use anyhow::Result;
 use biab_utils::{handle_shutdown_signal, init_logger};
-use std::{env, net::SocketAddr, sync::Arc, time::Duration};
-use tokio::{
-  io::{AsyncBufReadExt, BufReader},
-  net::TcpListener,
-  sync::Notify,
-  time::interval,
-};
+use std::{env, sync::Arc};
+use tokio::{process::Command, sync::Notify};
+use tokio_cron_scheduler::{Job, JobScheduler};
+
+mod tcp_server;
 
 #[tokio::main]
-async fn main() {
-  // Load environment variables
-  let addr: String = env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:5555".to_string());
-
+async fn main() -> Result<()> {
   init_logger();
 
   // Setup graceful shutdown
   let shutdown = Arc::new(Notify::new());
-  {
-    let shutdown = shutdown.clone();
-
-    tokio::spawn(async move {
-      handle_shutdown_signal(shutdown).await;
-    });
-  }
-
-  // Start background task
-  tokio::spawn(run_periodic_task(shutdown.clone()));
+  tokio::spawn(handle_shutdown_signal(shutdown.clone()));
 
   // Start TCP server
-  start_tcp_server(addr, shutdown.clone()).await;
+  // tokio::spawn(tcp_server::start_tcp_server(shutdown.clone()));
+
+  start_scheduler(shutdown).await
 }
 
 // Periodic background task
-async fn run_periodic_task(shutdown: Arc<Notify>) {
-  let task_interval: u64 = env::var("TASK_INTERVAL")
-    .unwrap_or_else(|_| "5".to_string())
-    .parse()
-    .unwrap_or(5);
-  let mut interval = interval(Duration::from_secs(task_interval));
-  loop {
-    tokio::select! {
-      _ = interval.tick() => {
-        log::info!("Running scheduled task...");
-        // Simulate work
-      }
-      _ = shutdown.notified() => {
-        log::info!("Stopping tasks...");
-        break;
-      }
-    }
-  }
+async fn start_scheduler(shutdown: Arc<Notify>) -> Result<()> {
+  // Create a scheduler
+  let mut scheduler = JobScheduler::new().await?;
+
+  scheduler
+    .add(Job::new_async(
+      env::var("PREPARE_CRON_SCHEDULE").unwrap_or_else(|_| "*/5 * * * * *".to_string()),
+      |_, _| Box::pin(fetch_randomness()),
+    )?)
+    .await?;
+
+  // Run the scheduler
+  scheduler.start().await?;
+
+  shutdown.notified().await;
+  log::info!("Stopping tasks...");
+  scheduler.shutdown().await?;
+
+  Ok(())
 }
 
-// TCP Server to listen for messages
-async fn start_tcp_server(addr: String, shutdown: Arc<Notify>) {
-  let messenger = biab_utils::Messenger::new();
-  let listener = match TcpListener::bind(&addr).await {
-    Ok(listener) => listener,
-    Err(e) => {
-      log::error!("Failed to bind to {}: {}", addr, e);
-      panic!("Failed to bind to address");
-    }
-  };
-
-  log::info!("Listening on {}", addr);
-
-  loop {
-    tokio::select! {
-      Ok((stream, peer)) = listener.accept() => {
-        log::debug!("New connection from {}", peer);
-        tokio::spawn(handle_client(messenger.clone(), stream, peer));
-      }
-      _ = shutdown.notified() => {
-        log::info!("Shutting down TCP server...");
-        break;
-      }
-    }
-  }
+async fn fetch_randomness() {
+  log::info!("Fetching randomness...");
+  let rng_script = env::var("RNG_SCRIPT").unwrap_or_else(|_| "rng.py".to_string());
+  let output = run_python_script(&rng_script).await.unwrap();
+  log::info!("Randomness: {:?}", output);
 }
 
-async fn handle_client(
-  messenger: biab_utils::Messenger,
-  mut stream: tokio::net::TcpStream,
-  peer: SocketAddr,
-) {
-  loop {
-    if let Some(message) = messenger.receive(&mut stream).await {
-      log::debug!("[{}] Received message: {:?}", peer, message);
-    }
+async fn run_python_script(command: &str) -> Result<Vec<u8>> {
+  let parts: Vec<&str> = command.split_whitespace().collect();
+  let mut cmd = Command::new(parts[0]);
+  for part in &parts[1..] {
+    cmd.arg(part);
+  }
+  let output = cmd.output().await?;
+  if !output.status.success() {
+    return Err(anyhow::anyhow!(
+      "Failed to run python script: {}",
+      String::from_utf8_lossy(&output.stderr)
+    ));
   }
 
-  // log::debug!("[{}] Connection closed", peer);
+  Ok(output.stdout)
 }

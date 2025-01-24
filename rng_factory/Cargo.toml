@@ -11,3 +11,4 @@ path = "src/main.rs"
 biab_utils = { path = "../biab_utils" }
 tokio = { version = "1.43.0", features = ["full"] }
 log = "0.4.25"
+anyhow = "1.0.95"

@@ -1,3 +1,4 @@
+use anyhow::Result;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::io::Read;
@@ -5,6 +6,14 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::net::TcpStream;
+
+fn encode<T: Serialize>(data: &T) -> Result<Vec<u8>> {
+  rmp_serde::to_vec(data).map_err(|e| e.into())
+}
+
+fn decode<T: DeserializeOwned, R: Read>(data: R) -> Result<T> {
+  rmp_serde::decode::from_read(data).map_err(|e| e.into())
+}
 
 #[derive(Debug, Clone, Hash, Serialize, Deserialize)]
 pub struct Message {
@@ -15,11 +24,11 @@ pub struct Message {
 }
 
 impl Message {
-  pub fn extract_payload<T: DeserializeOwned>(&self) -> bincode::Result<Option<T>> {
+  pub fn extract_payload<T: DeserializeOwned>(&self) -> Result<Option<T>> {
     self
       .payload
       .as_ref()
-      .map(|p| bincode::deserialize(p))
+      .map(|p| decode(p.as_slice()))
       .transpose()
   }
 }
@@ -57,7 +66,7 @@ impl Messenger {
   fn prepare<T: Serialize>(&self, command: &str, payload: Option<&T>) -> Message {
     let id = uuid::Uuid::new_v4();
     let timestamp = chrono::Utc::now();
-    let payload = payload.map(|p| bincode::serialize(p).expect("Failed to serialize payload"));
+    let payload = payload.map(|p| encode(p).expect("Failed to serialize payload"));
     let message = Message {
       id,
       timestamp,
@@ -86,7 +95,7 @@ impl Messenger {
     stream: &mut TcpStream,
     message: M,
   ) -> tokio::io::Result<()> {
-    let serialized = bincode::serialize(message.as_ref()).expect("Failed to serialize message");
+    let serialized = encode(message.as_ref()).expect("Failed to serialize message");
     let len = serialized.len() as u32;
 
     let mut writer = BufWriter::new(stream);
@@ -107,7 +116,7 @@ impl Messenger {
     let mut data_buf = vec![0; len];
     reader.read_exact(&mut data_buf).await.ok()?;
 
-    let message: Message = match bincode::deserialize(&data_buf) {
+    let message: Message = match decode(data_buf.as_slice()) {
       Ok(message) => message,
       Err(e) => {
         log::error!("Failed to deserialize message: {}", e);
@@ -134,34 +143,4 @@ impl Messenger {
 
     Some(message)
   }
-
-  // pub fn receive<B: AsRef<[u8]>>(&self, bytes: B) -> Option<Message> {
-  //   let message: Message = match bincode::deserialize(bytes.as_ref()) {
-  //     Ok(message) => message,
-  //     Err(e) => {
-  //       log::error!("Failed to deserialize message: {}", e);
-  //       return None;
-  //     }
-  //   };
-
-  //   let mut latest = self.latest.write().expect("Failed to acquire lock");
-
-  //   // check timestamp and id
-  //   match &*latest {
-  //     Some(latest) => {
-  //       if message.timestamp < latest.timestamp {
-  //         log::warn!("Received message with older timestamp");
-  //         return None;
-  //       }
-  //       if message.id == latest.id {
-  //         log::warn!("Received duplicate message. Ignoring.");
-  //         return None;
-  //       }
-  //     }
-  //     None => {}
-  //   };
-
-  //   *latest = Some(message.clone());
-  //   Some(message)
-  // }
 }

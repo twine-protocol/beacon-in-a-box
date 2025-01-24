@@ -27,6 +27,8 @@ RUN cargo build --release --bin ${APP_NAME}
 
 # Final runtime image
 FROM debian:bookworm-slim AS runtime
+RUN apt-get update && apt-get install -y python3
 ARG APP_NAME=app
 WORKDIR /app
+COPY --from=builder /app/python_example /app/python_example
 COPY --from=builder /app/target/release/${APP_NAME} /app/${APP_NAME}

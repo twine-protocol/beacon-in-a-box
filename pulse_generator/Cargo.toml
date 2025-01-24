@@ -10,4 +10,6 @@ path = "src/main.rs"
 [dependencies]
 biab_utils = { path = "../biab_utils" }
 tokio = { version = "1.43.0", features = ["full"] }
+tokio-cron-scheduler = "0.13.0"
 log = "0.4.25"
+anyhow = "1.0.44"

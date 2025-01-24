@@ -1,37 +1,32 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Result;
 use biab_utils::{handle_shutdown_signal, init_logger};
-use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
+use tokio::process::Command;
 use tokio::sync::Notify;
 use tokio::time::interval;
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
-  let mut stream = TcpStream::connect("generator:5555").await?;
-
+async fn main() -> Result<()> {
+  let rng_script = std::env::var("RNG_SCRIPT_PATH").unwrap_or_else(|_| "rng.py".to_string());
   let shutdown = Arc::new(Notify::new());
+  let mut stream = TcpStream::connect("generator:5555").await?;
+  let messenger = biab_utils::Messenger::new();
 
   init_logger();
-
-  {
-    let shutdown = shutdown.clone();
-    tokio::spawn(async move {
-      handle_shutdown_signal(shutdown).await;
-    });
-  }
+  tokio::spawn(handle_shutdown_signal(shutdown.clone()));
 
   let mut interval = interval(Duration::from_secs(5));
-
-  let messenger = biab_utils::Messenger::new();
 
   loop {
     tokio::select! {
       _ = interval.tick() => {
-        log::info!("Running scheduled task...");
+        log::info!("Fetching randomness...");
+        let output = run_python_script(&rng_script).await?;
         // Simulate work
-        messenger.send_text(&mut stream, "hello").await?;
+        messenger.send_delivery(&mut stream, "randomness", &output).await?;
       }
       _ = shutdown.notified() => {
         log::info!("Stopping tasks...");
@@ -41,4 +36,16 @@ async fn main() -> std::io::Result<()> {
   }
 
   Ok(())
+}
+
+async fn run_python_script(script_path: &str) -> Result<Vec<u8>> {
+  let output = Command::new("python3").arg(script_path).output().await?;
+  if !output.status.success() {
+    return Err(anyhow::anyhow!(
+      "Failed to run python script: {}",
+      String::from_utf8_lossy(&output.stderr)
+    ));
+  }
+
+  Ok(output.stdout)
 }
