@@ -8,10 +8,20 @@ services:
     environment:
       - LOG_LEVEL=debug
       - RNG_SCRIPT=python3 /app/python_example/get_randomness.py
+      - RNG_STORAGE_PATH=/randomness
+      - PRIVATE_KEY_PATH=/data/key.pem
+      - STRAND_JSON_PATH=/data/bafyriqbxdqyijm63m3kg36khsfcoi2seliicqwakxowcstyzwjunwrog4rf2fchtmkbp4fdeedtjazemrrp46w2nztuiwmip2uyusxhwxzrbo.strand.json
       # - PREPARE_CRON_SCHEDULE="50 * * * * *" # every 50th second of the minute
+    volumes:
+      - .twine:/data
+      - randomness:/randomness
     command: ["/app/pulse_generator"]
     networks:
       - internal
+
+volumes:
+  # stores the next randomness to be used
+  randomness:
 
 networks:
   internal:

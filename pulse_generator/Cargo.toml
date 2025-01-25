@@ -13,3 +13,6 @@ tokio = { version = "1.43.0", features = ["full"] }
 tokio-cron-scheduler = "0.13.0"
 log = "0.4.25"
 anyhow = "1.0.44"
+twine = { git = "https://github.com/twine-protocol/twine-rs.git", features = ["build", "rsa"] }
+serde = { version = "1.0.130", features = ["derive"] }
+chrono = { version = "0.4.39", features = ["serde"] }
