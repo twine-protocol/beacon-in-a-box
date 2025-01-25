@@ -1,6 +1,5 @@
 use anyhow::Result;
 use biab_utils::{handle_shutdown_signal, init_logger};
-use chrono::prelude::*;
 use std::time::Duration;
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
@@ -30,52 +29,27 @@ async fn main() -> Result<()> {
   let json = std::fs::read_to_string(strand_path)?;
   let strand = Arc::new(Strand::from_tagged_dag_json(json)?);
   let store = twine::twine_core::store::MemoryStore::new();
-  // load the strand information and key
   let assembler = PulseAssembler::new(signer, strand, store)
     .with_rng_path(env::var("RNG_STORAGE_PATH")?);
 
   start_scheduler(assembler, shutdown).await
 }
 
-// Periodic background task
 async fn start_scheduler(
   assembler: PulseAssembler<impl Store + Resolver + 'static>,
   shutdown: Arc<Notify>,
 ) -> Result<()> {
-  // Create a scheduler
   let mut scheduler = JobScheduler::new().await?;
-
   let assembler = Arc::new(Mutex::new(assembler));
 
-  scheduler
-    .add(Job::new_async(
-      env::var("PREPARE_CRON_SCHEDULE")
-        .unwrap_or_else(|_| "50 * * * * *".to_string()),
-      move |_, scheduler: JobScheduler| {
-        let assembler = assembler.clone();
-        Box::pin(async move {
-          match assemble_job(assembler.clone()).await {
-            Ok(_) => {
-              {
-                let assembler = assembler.lock().await;
-                log::debug!(
-                  "Pulse prepared and ready for release: {}",
-                  assembler.prepared().expect("prepared pulse")
-                );
-              }
-              scheduler_publish_job(scheduler, assembler).await;
-            }
-            Err(e) => log::error!("Failed to assemble job: {:?}", e),
-          }
-        })
-      },
-    )?)
-    .await?;
+  let prepare_schedule = env::var("PREPARE_CRON_SCHEDULE")
+    .unwrap_or_else(|_| "50 * * * * *".to_string());
 
-  // Run the scheduler
+  scheduler
+    .add(create_prepare_job(prepare_schedule, assembler.clone())?)
+    .await?;
   scheduler.start().await?;
 
-  // Wait for shutdown signal
   shutdown.notified().await;
   log::info!("Stopping tasks...");
   scheduler.shutdown().await?;
@@ -83,7 +57,35 @@ async fn start_scheduler(
   Ok(())
 }
 
-async fn scheduler_publish_job(
+fn create_prepare_job(
+  schedule: String,
+  assembler: Arc<Mutex<PulseAssembler<impl Store + Resolver + 'static>>>,
+) -> Result<Job> {
+  Ok(Job::new_async(
+    schedule,
+    move |_, scheduler: JobScheduler| {
+      let assembler = assembler.clone();
+      Box::pin(async move {
+        if let Err(e) = assemble_job(assembler.clone()).await {
+          log::error!("Failed to assemble job: {:?}", e);
+          return;
+        }
+
+        {
+          let assembler = assembler.lock().await;
+          log::debug!(
+            "Pulse prepared and ready for release: {}",
+            assembler.prepared().expect("prepared pulse")
+          );
+        }
+
+        schedule_publish_job(scheduler, assembler).await;
+      })
+    },
+  )?)
+}
+
+async fn schedule_publish_job(
   scheduler: JobScheduler,
   assembler: Arc<Mutex<PulseAssembler<impl Store + Resolver + 'static>>>,
 ) {
@@ -91,27 +93,32 @@ async fn scheduler_publish_job(
   let duration = {
     let assembler = assembler.lock().await;
     let dt = assembler.timestamp_of_publish().expect("timestamp") - now;
-    dt.to_std().unwrap_or(std::time::Duration::from_secs(0))
+    dt.to_std().unwrap_or(Duration::from_secs(0))
   };
-  // round up to the nearest second
+
   let duration = Duration::from_secs(duration.as_secs() + 1);
   log::info!("Scheduling to publish in {:?}", duration);
-  let ret = scheduler.add(
-    Job::new_one_shot_async(duration, move |_, _| {
-      let assembler = assembler.clone();
-      Box::pin(async move {
-        match publish_job(assembler.clone()).await {
-          Ok(_) => log::debug!("Pulse published"),
-          Err(e) => log::error!("Failed to publish pulse: {:?}", e),
-        }
-      })
-    })
-    .unwrap(),
-  );
 
-  if let Err(e) = ret.await {
+  if let Err(e) = scheduler.add(create_publish_job(duration, assembler)).await {
     log::error!("Failed to schedule publish job: {:?}", e);
   }
+}
+
+fn create_publish_job(
+  duration: Duration,
+  assembler: Arc<Mutex<PulseAssembler<impl Store + Resolver + 'static>>>,
+) -> Job {
+  Job::new_one_shot_async(duration, move |_, _| {
+    let assembler = assembler.clone();
+    Box::pin(async move {
+      if let Err(e) = publish_job(assembler.clone()).await {
+        log::error!("Failed to publish pulse: {:?}", e);
+      } else {
+        log::debug!("Pulse published");
+      }
+    })
+  })
+  .unwrap()
 }
 
 async fn assemble_job(
@@ -136,7 +143,7 @@ async fn fetch_randomness() -> Result<Vec<u8>> {
   log::info!("Fetching randomness...");
   let rng_script =
     env::var("RNG_SCRIPT").unwrap_or_else(|_| "rng.py".to_string());
-  let output = run_python_script(&rng_script).await.unwrap();
+  let output = run_python_script(&rng_script).await?;
   log::info!("Randomness: {:?}", output);
   Ok(output)
 }
