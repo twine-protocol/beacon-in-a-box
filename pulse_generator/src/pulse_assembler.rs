@@ -1,9 +1,7 @@
 use anyhow::Result;
 use std::{path::PathBuf, sync::Arc};
 use twine::{
-  prelude::*,
-  twine_builder::RingSigner,
-  twine_core::{crypto::PublicKey, semver::Op},
+  prelude::*, twine_builder::RingSigner, twine_core::crypto::PublicKey,
 };
 
 use super::payload::*;
@@ -51,6 +49,19 @@ impl<S: Store + Resolver> PulseAssembler<S> {
   fn save_rng(&self, rng: &[u8; 64]) -> Result<()> {
     std::fs::write(self.rng_file(), rng)?;
     Ok(())
+  }
+
+  pub fn prepared(&self) -> Option<&Twine> {
+    self.prepared.as_ref()
+  }
+
+  pub fn timestamp_of_publish(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+    self.prepared.as_ref().map(|twine| {
+      twine
+        .extract_payload::<RandomnessPayload>()
+        .expect("payload")
+        .timestamp()
+    })
   }
 
   async fn latest(&mut self) -> Result<Option<Twine>> {

@@ -130,4 +130,16 @@ impl RandomnessPayload {
     }
     Ok(current.cid().hash().digest().to_vec())
   }
+
+  pub fn timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+    self.0.timestamp
+  }
+
+  pub fn salt(&self) -> &[u8] {
+    &self.0.salt.0
+  }
+
+  pub fn pre(&self) -> Multihash {
+    self.0.pre
+  }
 }
