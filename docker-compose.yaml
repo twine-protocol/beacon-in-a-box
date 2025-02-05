@@ -12,6 +12,7 @@ services:
       - PRIVATE_KEY_PATH=/data/key.pem
       - STRAND_JSON_PATH=/data/bafyriqbxdqyijm63m3kg36khsfcoi2seliicqwakxowcstyzwjunwrog4rf2fchtmkbp4fdeedtjazemrrp46w2nztuiwmip2uyusxhwxzrbo.strand.json
       # - PREPARE_CRON_SCHEDULE="50 * * * * *" # every 50th second of the minute
+      - LEAD_TIME_SECONDS=10
     volumes:
       - .twine:/data
       - randomness:/randomness

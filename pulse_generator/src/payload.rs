@@ -28,6 +28,12 @@ impl Verifiable for RandomnessPayloadRaw {
         "Salt length does not match pre hash size".to_string(),
       ));
     }
+    // verify that the timestamp doesn't have any ms
+    if self.timestamp.timestamp_subsec_millis() != 0 {
+      return Err(VerificationError::Payload(
+        "Timestamp has milliseconds".to_string(),
+      ));
+    }
     Ok(())
   }
 }
