@@ -68,6 +68,19 @@ impl RandomnessPayload {
     pre: Multihash,
     prev: Arc<Tixel>,
   ) -> Result<Self, VerificationError> {
+    // ensure rand corresponds to previous pre
+    let prev_payload = prev.extract_payload::<RandomnessPayload>()?;
+
+    let code = Code::try_from(prev_payload.0.pre.code())
+      .map_err(|_| VerificationError::UnsupportedHashAlgorithm)?;
+
+    use twine::twine_core::multihash_codetable::MultihashDigest;
+    if prev_payload.0.pre != code.digest(&rand) {
+      return Err(VerificationError::Payload(
+        "Precommitment does not match random bytes".to_string(),
+      ));
+    }
+
     if prev.cid().hash().size() != pre.size() {
       return Err(VerificationError::Payload(
         "Pre hash size does not match previous tixel hash size".to_string(),

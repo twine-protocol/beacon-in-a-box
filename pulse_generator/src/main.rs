@@ -46,7 +46,12 @@ async fn start_scheduler(
           log::info!("Stopping tasks...");
           break;
         }
-        _ = advance(&assembler) => {}
+        res = advance(&assembler) => {
+          if let Err(e) = res {
+            log::error!("Error advancing: {}", e);
+            break;
+          }
+        }
       }
     }
   });
