@@ -36,5 +36,10 @@ mod test {
     let prev_time = ts - period;
     let next = next_pulse_timestamp(prev_time, period);
     assert_eq!(next, ts + period);
+
+    let period = TimeDelta::minutes(5);
+    let prev_time = ts;
+    let next = next_pulse_timestamp(prev_time, period);
+    assert_eq!(next, ts + period);
   }
 }
