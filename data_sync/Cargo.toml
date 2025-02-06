@@ -1,18 +1,19 @@
 [package]
-name = "pulse_generator"
+name = "data_sync"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "pulse_generator"
+name = "data_sync"
 path = "src/main.rs"
 
 [dependencies]
 biab_utils = { path = "../biab_utils" }
-tokio = { version = "1.43.0", features = ["full"] }
-log = "0.4.25"
-anyhow = "1.0.44"
 twine = { git = "https://github.com/twine-protocol/twine-rs.git", features = ["build", "rsa"] }
 twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
+tokio = { version = "1.43.0", features = ["full"] }
+futures = "0.3.31"
+log = "0.4.25"
+anyhow = "1.0.44"
 serde = { version = "1.0.130", features = ["derive"] }
 chrono = { version = "0.4.39", features = ["serde"] }

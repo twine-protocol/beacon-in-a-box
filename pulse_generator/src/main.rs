@@ -2,12 +2,11 @@ use anyhow::Result;
 use biab_utils::{handle_shutdown_signal, init_logger};
 use chrono::Duration;
 use std::{env, sync::Arc};
-use tokio::{process::Command, sync::Notify};
+use tokio::{net::TcpStream, process::Command, sync::Notify};
 use twine::prelude::*;
 mod pulse_assembler;
 use pulse_assembler::*;
 mod payload;
-mod tcp_server;
 mod timing;
 
 #[tokio::main]
@@ -17,9 +16,6 @@ async fn main() -> Result<()> {
   // Setup graceful shutdown
   let shutdown = Arc::new(Notify::new());
   tokio::spawn(handle_shutdown_signal(shutdown.clone()));
-
-  // Start TCP server
-  // tokio::spawn(tcp_server::start_tcp_server(shutdown.clone()));
 
   let key_path = env::var("PRIVATE_KEY_PATH")?;
   let pem = std::fs::read_to_string(key_path)?;
@@ -113,6 +109,17 @@ async fn publish_job(
   match assembler.publish().await {
     Ok(latest) => {
       log::info!("Pulse ({}) published: {}", latest.index(), latest.tixel());
+
+      // send a tcp message to the syncher
+      let messenger = biab_utils::Messenger::new();
+      if let Ok(mut stream) = TcpStream::connect("data_sync:5555").await {
+        match messenger.send_text(&mut stream, "sync").await {
+          Ok(_) => log::debug!("Notified data sync task"),
+          Err(e) => {
+            log::error!("Failed to send notification to data sync task: {}", e)
+          }
+        }
+      }
     }
     Err(e) => {
       log::error!("Failed to publish pulse: {:?}", e);
@@ -123,11 +130,10 @@ async fn publish_job(
 }
 
 async fn fetch_randomness() -> Result<Vec<u8>> {
-  log::info!("Fetching randomness...");
+  log::info!("Fetching fresh randomness...");
   let rng_script =
     env::var("RNG_SCRIPT").unwrap_or_else(|_| "rng.py".to_string());
   let output = run_python_script(&rng_script).await?;
-  log::info!("Randomness: {:?}", output);
   Ok(output)
 }
 

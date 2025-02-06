@@ -2,5 +2,6 @@
 members = [
   "pulse_generator",
   "biab_utils",
+  "data_sync",
 ]
 

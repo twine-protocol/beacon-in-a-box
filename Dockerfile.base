@@ -6,6 +6,7 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY pulse_generator/Cargo.toml ./pulse_generator/
 COPY biab_utils/Cargo.toml ./biab_utils/
+COPY data_sync/Cargo.toml ./data_sync/
 
 RUN cargo chef prepare --recipe-path recipe.json
 
