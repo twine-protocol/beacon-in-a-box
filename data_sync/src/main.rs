@@ -49,6 +49,8 @@ async fn main() -> Result<()> {
     .build()?;
   let remote_store = v2::HttpStore::new(client).with_url(&remote_addr);
 
+  // Start the worker and sync immediately
+  signals.start_sync.notify_one();
   worker(signals, store, remote_store).await
 }
 
@@ -147,7 +149,7 @@ async fn start_sync(store: &SqlStore, remote_store: &HttpStore) -> Result<()> {
         }
       };
 
-      let remote_latest_index = match remote_latest {
+      let starting_index = match remote_latest {
         Ok(latest) => latest.index() + 1,
         Err(ResolutionError::NotFound) => 0,
         Err(e) => {
@@ -156,12 +158,12 @@ async fn start_sync(store: &SqlStore, remote_store: &HttpStore) -> Result<()> {
         }
       };
 
-      if latest.index() <= remote_latest_index {
+      if latest.index() < starting_index {
         log::debug!("No new tixels to sync for strand: {}", strand.cid());
         return Ok(None);
       }
 
-      let range = AbsoluteRange::new(strand.cid(), remote_latest_index, latest.index());
+      let range = AbsoluteRange::new(strand.cid(), starting_index, latest.index());
       Ok(Some(range))
     })
     .try_filter_map(|x| async move { Ok(x) })
