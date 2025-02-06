@@ -30,15 +30,11 @@ impl AssemblyState {
     &self,
     lead_time: Duration,
   ) -> std::time::Duration {
-    use chrono::Timelike;
     let now = chrono::Utc::now();
+    let period = chrono::Duration::minutes(PULSE_PERIOD_MINUTES);
     match self {
       AssemblyState::BeginStrand => {
-        let now = chrono::Utc::now();
-        let top_of_the_minute =
-          now.with_second(0).unwrap().with_nanosecond(0).unwrap();
-        let next_ts =
-          top_of_the_minute + chrono::Duration::minutes(PULSE_PERIOD_MINUTES);
+        let next_ts = crate::timing::next_truncated_time(period);
         let next_time = next_ts - lead_time;
         next_time
           .signed_duration_since(now)
@@ -62,7 +58,7 @@ impl AssemblyState {
           .expect("payload")
           .timestamp();
 
-        let next_ts = prev_ts + chrono::Duration::minutes(PULSE_PERIOD_MINUTES);
+        let next_ts = crate::timing::next_pulse_timestamp(prev_ts, period);
         let next_time = next_ts - lead_time;
         next_time
           .signed_duration_since(now)
@@ -218,6 +214,8 @@ impl<S: Store + Resolver> PulseAssembler<S> {
       return Err(anyhow::anyhow!("Called prepare when it wasn't needed"));
     }
 
+    let period = chrono::Duration::minutes(PULSE_PERIOD_MINUTES);
+
     let next = match self.state().await {
       AssemblyState::BeginStrand => {
         let pre = self.strand.hasher().digest(next_randomness);
@@ -226,13 +224,17 @@ impl<S: Store + Resolver> PulseAssembler<S> {
         self
           .builder
           .build_first((*self.strand).clone())
-          .payload(RandomnessPayload::new_start(pre)?)
+          .payload(RandomnessPayload::new_start(pre, period)?)
           .done()?
       }
       AssemblyState::Released { latest, rand } => {
         let pre = self.strand.hasher().digest(next_randomness);
-        let payload =
-          RandomnessPayload::from_rand(rand.to_vec(), pre, latest.tixel())?;
+        let payload = RandomnessPayload::from_rand(
+          rand.to_vec(),
+          pre,
+          latest.tixel(),
+          period,
+        )?;
         self.builder.build_next(&latest).payload(payload).done()?
       }
       _ => unreachable!(),

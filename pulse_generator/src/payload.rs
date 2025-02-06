@@ -1,18 +1,10 @@
-use chrono::Timelike;
+use chrono::TimeDelta;
 use std::sync::Arc;
 use twine::prelude::*;
 use twine::twine_core::multihash_codetable::Code;
 use twine::twine_core::multihash_codetable::Multihash;
 use twine::twine_core::verify::{Verifiable, Verified};
 use twine::twine_core::Bytes;
-
-fn top_of_the_minute() -> chrono::DateTime<chrono::Utc> {
-  let now = chrono::Utc::now();
-  let top_of_the_minute =
-    now.with_second(0).unwrap().with_nanosecond(0).unwrap();
-
-  top_of_the_minute + chrono::Duration::minutes(1)
-}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct RandomnessPayloadRaw {
@@ -55,18 +47,11 @@ impl RandomnessPayload {
     .map(Self)
   }
 
-  pub fn try_new_now(
-    salt: Bytes,
-    pre: Multihash,
-  ) -> Result<Self, VerificationError> {
-    let timestamp = top_of_the_minute();
-    Self::try_new(salt, pre, timestamp)
-  }
-
   pub fn from_rand(
     rand: Vec<u8>,
     pre: Multihash,
     prev: Arc<Tixel>,
+    period: chrono::TimeDelta,
   ) -> Result<Self, VerificationError> {
     // ensure rand corresponds to previous pre
     let prev_payload = prev.extract_payload::<RandomnessPayload>()?;
@@ -94,13 +79,19 @@ impl RandomnessPayload {
         .map(|(a, b)| a ^ b)
         .collect(),
     );
-    Self::try_new_now(salt, pre)
+    let timestamp =
+      crate::timing::next_pulse_timestamp(prev_payload.0.timestamp, period);
+    Self::try_new(salt, pre, timestamp)
   }
 
-  pub fn new_start(pre: Multihash) -> Result<Self, VerificationError> {
+  pub fn new_start(
+    pre: Multihash,
+    period: TimeDelta,
+  ) -> Result<Self, VerificationError> {
     let num_bytes = pre.size();
     let salt = Bytes((0..num_bytes).collect());
-    Self::try_new_now(salt, pre)
+    let timestamp = crate::timing::next_truncated_time(period);
+    Self::try_new(salt, pre, timestamp)
   }
 
   pub fn validate_randomness(

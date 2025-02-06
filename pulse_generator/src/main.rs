@@ -8,6 +8,7 @@ mod pulse_assembler;
 use pulse_assembler::*;
 mod payload;
 mod tcp_server;
+mod timing;
 
 #[tokio::main]
 async fn main() -> Result<()> {
