@@ -26,7 +26,9 @@ async fn main() -> Result<()> {
   let strand_path = env::var("STRAND_JSON_PATH")?;
   let json = std::fs::read_to_string(strand_path)?;
   let strand = Arc::new(Strand::from_tagged_dag_json(json)?);
-  let store = twine::twine_core::store::MemoryStore::new();
+  // let store = twine::twine_core::store::MemoryStore::new();
+  let store =
+    twine_sql_store::SqlStore::open("mysql://root:root@db/twine").await?;
   let assembler = PulseAssembler::new(signer, strand, store)
     .with_rng_path(env::var("RNG_STORAGE_PATH")?);
 
@@ -92,8 +94,8 @@ async fn assemble_job(
   match assembler.prepare_next(&rand).await {
     Ok(_) => {
       log::info!(
-        "Pulse prepared and ready for release: {}",
-        assembler.prepared().await.expect("prepared pulse")
+        "Pulse {} prepared and ready for release",
+        assembler.prepared().await.expect("prepared pulse").index()
       );
       Ok(())
     }
