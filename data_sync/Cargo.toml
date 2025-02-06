@@ -9,8 +9,9 @@ path = "src/main.rs"
 
 [dependencies]
 biab_utils = { path = "../biab_utils" }
-twine = { git = "https://github.com/twine-protocol/twine-rs.git", features = ["build", "rsa"] }
-twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
+twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "28ee65bf0d5ff69f2813b7efd8e361af13352d7a", features = ["build", "rsa"] }
+twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "28ee65bf0d5ff69f2813b7efd8e361af13352d7a", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
+twine_http_store =  { git = "https://github.com/twine-protocol/twine-rs.git", rev = "28ee65bf0d5ff69f2813b7efd8e361af13352d7a", package = "twine_http_store" }
 tokio = { version = "1.43.0", features = ["full"] }
 futures = "0.3.31"
 log = "0.4.25"

@@ -3,6 +3,7 @@ use biab_utils::{handle_shutdown_signal, init_logger};
 use std::{env, sync::Arc};
 use tokio::{sync::Notify, time::sleep};
 use twine::prelude::*;
+use twine_http_store::v2::HttpStore;
 use twine_sql_store::SqlStore;
 
 #[derive(Debug, Clone)]
@@ -30,7 +31,25 @@ async fn main() -> Result<()> {
   let store =
     twine_sql_store::SqlStore::open("mysql://root:root@db/twine").await?;
 
-  worker(signals, store).await
+  let remote_addr = env::var("REMOTE_STORE_ADDRESS")?;
+  use twine_http_store::{reqwest::Client, v2};
+  let client = Client::builder()
+    .default_headers({
+      use twine_http_store::reqwest::header::{
+        HeaderMap, HeaderValue, AUTHORIZATION,
+      };
+      let mut headers = HeaderMap::new();
+      let key = env::var("REMOTE_STORE_API_KEY")?;
+      if !key.is_empty() {
+        let value = format!("ApiKey {}", key);
+        headers.insert(AUTHORIZATION, HeaderValue::from_str(&value).unwrap());
+      }
+      headers
+    })
+    .build()?;
+  let remote_store = v2::HttpStore::new(client).with_url(&remote_addr);
+
+  worker(signals, store, remote_store).await
 }
 
 fn init_tcp_listener(signals: Signals) {
@@ -75,7 +94,11 @@ fn init_sync_scheduler(signals: Signals) {
   });
 }
 
-async fn worker(signals: Signals, store: SqlStore) -> Result<()> {
+async fn worker(
+  signals: Signals,
+  store: SqlStore,
+  remote_store: HttpStore,
+) -> Result<()> {
   let worker = tokio::spawn(async move {
     loop {
       signals.start_sync.notified().await;
@@ -85,7 +108,7 @@ async fn worker(signals: Signals, store: SqlStore) -> Result<()> {
           log::info!("Stopping tasks...");
           break;
         }
-        res = start_sync(&store) => {
+        res = start_sync(&store, &remote_store) => {
           if let Err(e) = res {
             log::error!("Error syncing: {}", e);
             sleep(std::time::Duration::from_secs(5)).await;
@@ -99,22 +122,71 @@ async fn worker(signals: Signals, store: SqlStore) -> Result<()> {
   Ok(())
 }
 
-async fn start_sync(store: &SqlStore) -> Result<()> {
-  use futures::{StreamExt, TryStreamExt};
+async fn start_sync(store: &SqlStore, remote_store: &HttpStore) -> Result<()> {
+  use futures::TryStreamExt;
   log::debug!("Beginning sync...");
-  // simulate
-  let strands = store.strands().await?.try_collect::<Vec<_>>().await?;
-  let latests = futures::stream::iter(strands)
-    .then(|strand| async move {
-      let latest = store.resolve_latest(&strand).await?;
-      Ok::<_, ResolutionError>((strand, latest.unpack()))
+  store
+    .strands()
+    .await?
+    .map_err(|e| anyhow::anyhow!(e))
+    .and_then(|strand| async move {
+      let (latest, remote_latest) = tokio::join!(
+        store.resolve_latest(&strand),
+        remote_store.resolve_latest(&strand)
+      );
+
+      let latest = match latest {
+        Ok(latest) => latest,
+        Err(ResolutionError::NotFound) => {
+          log::error!("No latest tixel for strand: {}", strand.cid());
+          return Ok(None);
+        }
+        Err(e) => {
+          log::error!("Error resolving latest tixel: {}", e);
+          return Ok(None);
+        }
+      };
+
+      let remote_latest_index = match remote_latest {
+        Ok(latest) => latest.index() + 1,
+        Err(ResolutionError::NotFound) => 0,
+        Err(e) => {
+          log::error!("Error resolving remote latest tixel. Will attempt sync anyway.: {}", e);
+          0
+        }
+      };
+
+      if latest.index() <= remote_latest_index {
+        log::debug!("No new tixels to sync for strand: {}", strand.cid());
+        return Ok(None);
+      }
+
+      let range = AbsoluteRange::new(strand.cid(), remote_latest_index, latest.index());
+      Ok(Some(range))
     })
-    .try_collect::<Vec<_>>()
+    .try_filter_map(|x| async move { Ok(x) })
+    .try_for_each(|range: AbsoluteRange| async move {
+      log::debug!("Syncing range: {}", range);
+      // if we're starting at zero, save the strand first
+      if range.start == 0 {
+        let strand = store.resolve_strand(range.strand_cid()).await?;
+        remote_store.save(strand.unpack()).await?;
+      }
+      let stream = store.resolve_range(range).await?;
+      // save them 1000 at a time
+      stream
+        .try_chunks(1000)
+        .map_err(|e| anyhow::anyhow!(e))
+        .try_for_each(|chunk| async {
+          log::debug!("Saving chunk of {} tixels", chunk.len());
+          remote_store.save_many(chunk).await?;
+          Ok(())
+        })
+        .await?;
+      Ok(())
+    })
     .await?;
-  latests.iter().for_each(|(strand, latest)| {
-    log::debug!("Latest for {}: {}", strand.cid(), latest.index());
-  });
-  sleep(std::time::Duration::from_secs(5)).await;
+
   log::debug!("Sync complete");
   Ok(())
 }
