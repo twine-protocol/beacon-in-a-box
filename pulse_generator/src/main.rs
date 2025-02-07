@@ -110,38 +110,37 @@ async fn advance(
 }
 
 async fn refresh_stitches(
-  prev_cross_stitches: CrossStitches,
+  mut xstitches: CrossStitches,
 ) -> Result<CrossStitches> {
   let path = env::var("STITCH_CONFIG_PATH")?;
   let stitch_config = stitch_config::StitchConfig::load(&path)?;
   let stitch_resolver = stitch_config.get_resolver();
   let strands_to_entwine = stitch_config.strands();
 
-  let (mut xstitches, errors) =
-    prev_cross_stitches.refresh_any(&stitch_resolver).await;
-
-  for (s, e) in errors {
-    log::error!(
-      "Error refreshing stitch to external strand {}: {}",
-      s.strand,
-      e
-    );
-  }
+  xstitches
+    .stitches()
+    .iter()
+    .filter(|s| !strands_to_entwine.contains(&s.strand))
+    .for_each(|s| {
+      log::info!("Will not refresh stitch to external strand {}", s.strand);
+    });
 
   for cid in strands_to_entwine {
-    if !xstitches.strand_is_stitched(cid) {
-      match xstitches
-        .clone()
-        .resolve_and_add(cid, &stitch_resolver)
-        .await
-      {
-        Ok(updated) => {
+    match xstitches
+      .clone()
+      .add_or_refresh(cid, &stitch_resolver)
+      .await
+    {
+      Ok(updated) => {
+        if xstitches.strand_is_stitched(cid) {
+          log::info!("Refreshed stitch to external strand {}", cid);
+        } else {
           log::info!("Added new stitch to external strand {}", cid);
-          xstitches = updated;
         }
-        Err(e) => {
-          log::error!("Error adding stitch to external strand {}: {}", cid, e);
-        }
+        xstitches = updated;
+      }
+      Err(e) => {
+        log::error!("Error adding stitch to external strand {}: {}", cid, e);
       }
     }
   }

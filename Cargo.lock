@@ -3128,7 +3128,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 [[package]]
 name = "twine"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=f625e59963014f19257d596a8e3ebec61f0dbcf4#f625e59963014f19257d596a8e3ebec61f0dbcf4"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=23a5a7f48d4d22573dce129a5db25544d4e9d2df#23a5a7f48d4d22573dce129a5db25544d4e9d2df"
 dependencies = [
  "twine_builder",
  "twine_core",
@@ -3137,7 +3137,7 @@ dependencies = [
 [[package]]
 name = "twine_builder"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=f625e59963014f19257d596a8e3ebec61f0dbcf4#f625e59963014f19257d596a8e3ebec61f0dbcf4"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=23a5a7f48d4d22573dce129a5db25544d4e9d2df#23a5a7f48d4d22573dce129a5db25544d4e9d2df"
 dependencies = [
  "anyhow",
  "biscuit",
@@ -3158,7 +3158,7 @@ dependencies = [
 [[package]]
 name = "twine_core"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=f625e59963014f19257d596a8e3ebec61f0dbcf4#f625e59963014f19257d596a8e3ebec61f0dbcf4"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=23a5a7f48d4d22573dce129a5db25544d4e9d2df#23a5a7f48d4d22573dce129a5db25544d4e9d2df"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3191,7 +3191,7 @@ dependencies = [
 [[package]]
 name = "twine_http_store"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=f625e59963014f19257d596a8e3ebec61f0dbcf4#f625e59963014f19257d596a8e3ebec61f0dbcf4"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=23a5a7f48d4d22573dce129a5db25544d4e9d2df#23a5a7f48d4d22573dce129a5db25544d4e9d2df"
 dependencies = [
  "async-trait",
  "backon",
@@ -3206,7 +3206,7 @@ dependencies = [
 [[package]]
 name = "twine_sql_store"
 version = "0.1.0"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=f625e59963014f19257d596a8e3ebec61f0dbcf4#f625e59963014f19257d596a8e3ebec61f0dbcf4"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=23a5a7f48d4d22573dce129a5db25544d4e9d2df#23a5a7f48d4d22573dce129a5db25544d4e9d2df"
 dependencies = [
  "async-trait",
  "futures",

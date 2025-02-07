@@ -11,6 +11,8 @@ use crate::cid_str::CidStr;
 pub struct StitchEntry {
   pub strand: CidStr,
   pub resolver: String,
+  #[serde(default)]
+  pub stop: bool,
 }
 
 /// Expected yaml structure:
@@ -52,6 +54,7 @@ impl StitchConfig {
     self
       .stitches
       .iter()
+      .filter(|entry| !entry.stop)
       .map(|entry| entry.strand.clone().into())
       .collect()
   }
