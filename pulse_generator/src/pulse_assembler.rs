@@ -3,7 +3,9 @@ use chrono::Duration;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 use twine::{
-  prelude::*, twine_builder::RingSigner, twine_core::crypto::PublicKey,
+  prelude::*,
+  twine_builder::RingSigner,
+  twine_core::{crypto::PublicKey, twine::CrossStitches},
 };
 
 use super::payload::*;
@@ -195,6 +197,14 @@ impl<S: Store + Resolver> PulseAssembler<S> {
       .time_till_state_change(lead_time)
   }
 
+  pub async fn previous_cross_stitches(&self) -> CrossStitches {
+    match self.state.lock().await.as_ref().expect("state") {
+      AssemblyState::BeginStrand => CrossStitches::default(),
+      AssemblyState::Prepared { prepared, .. } => prepared.cross_stitches(),
+      AssemblyState::Released { latest, .. } => latest.cross_stitches(),
+    }
+  }
+
   async fn latest(&self) -> Result<Option<Twine>> {
     let latest = match self.store.resolve_latest(&self.strand).await {
       Ok(latest) => Some(latest.unpack()),
@@ -207,7 +217,11 @@ impl<S: Store + Resolver> PulseAssembler<S> {
     Ok(latest)
   }
 
-  pub async fn prepare_next(&self, next_randomness: &[u8; 64]) -> Result<()> {
+  pub async fn prepare_next(
+    &self,
+    next_randomness: &[u8; 64],
+    cross_stitches: CrossStitches,
+  ) -> Result<()> {
     use twine::twine_core::multihash_codetable::MultihashDigest;
 
     if !self.needs_assembly().await {
@@ -224,6 +238,7 @@ impl<S: Store + Resolver> PulseAssembler<S> {
         self
           .builder
           .build_first((*self.strand).clone())
+          .cross_stitches(cross_stitches)
           .payload(RandomnessPayload::new_start(pre, period)?)
           .done()?
       }
@@ -235,7 +250,12 @@ impl<S: Store + Resolver> PulseAssembler<S> {
           latest.tixel(),
           period,
         )?;
-        self.builder.build_next(&latest).payload(payload).done()?
+        self
+          .builder
+          .build_next(&latest)
+          .cross_stitches(cross_stitches)
+          .payload(payload)
+          .done()?
       }
       _ => unreachable!(),
     };
