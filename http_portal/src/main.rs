@@ -10,12 +10,6 @@ mod dag_json;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  if env::var_os("RUST_LOG").is_none() {
-    // Set `RUST_LOG=todos=debug` to see debug logs,
-    // this only shows access logs.
-    env::set_var("RUST_LOG", "todos=info");
-  }
-
   init_logger();
 
   // Setup graceful shutdown
@@ -29,7 +23,6 @@ async fn main() -> Result<()> {
 
   let store = SqlStore::open("mysql://root:root@db/twine").await?;
 
-  // view access logs with RUST_LOG=api
   let api = filters::api(store).with(warp::log("api"));
 
   tokio::select! {
