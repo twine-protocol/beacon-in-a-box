@@ -1,10 +1,10 @@
 [package]
-name = "pulse_generator"
+name = "http_portal"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "pulse_generator"
+name = "http_portal"
 path = "src/main.rs"
 
 [dependencies]
@@ -12,11 +12,10 @@ twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "2d11582
 twine_http_store =  { git = "https://github.com/twine-protocol/twine-rs.git", rev = "2d11582dfe5c087bd613fd36ed7adc6df28e72db", package = "twine_http_store" }
 twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "2d11582dfe5c087bd613fd36ed7adc6df28e72db", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
 biab_utils = { path = "../biab_utils" }
-futures = "0.3.31"
 tokio = { version = "1.43.0", features = ["full"] }
+warp = "0.3.7"
+futures = "0.3.31"
 log = "0.4.25"
 anyhow = "1.0.44"
 serde = { version = "1.0.130", features = ["derive"] }
-chrono = { version = "0.4.39", features = ["serde"] }
-serde_yaml = "0.9.34+deprecated"
 serde_with = "3.12.0"

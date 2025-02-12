@@ -40,6 +40,25 @@ services:
     restart: unless-stopped
     networks:
       - internal
+      - external
+
+  http_portal:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+      args:
+        - APP_NAME=http_portal
+    environment:
+      - LOG_LEVEL=debug
+    command: ["/app/http_portal"]
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - internal
+      - external
 
   db:
     image: mysql:9.2
@@ -61,3 +80,5 @@ volumes:
 
 networks:
   internal:
+    internal: true
+  external:
