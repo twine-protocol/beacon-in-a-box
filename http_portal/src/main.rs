@@ -54,6 +54,7 @@ mod filters {
 
   #[derive(Debug, Deserialize)]
   struct QueryParams {
+    #[serde(default)]
     full: bool,
   }
 
@@ -62,8 +63,9 @@ mod filters {
   ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
   {
     let store = Arc::new(store);
-    list_strands(store.clone()).or(query(store)).recover(
-      |err: warp::Rejection| async move {
+    list_strands(store.clone())
+      .or(query(store))
+      .recover(|err: warp::Rejection| async move {
         let res = match err.find::<handlers::HttpError>() {
           Some(handlers::HttpError(e)) => match e {
             ResolutionError::NotFound => reply::with_status(
@@ -82,8 +84,8 @@ mod filters {
           None => return Err(err),
         };
         Ok(res)
-      },
-    )
+      })
+      .with(warp::reply::with::header("X-Spool-Version", "2"))
   }
 
   fn list_strands(
@@ -92,8 +94,9 @@ mod filters {
   {
     warp::path::end()
       .and(with_store(store))
-      .and_then(|store| async move {
-        let res = handlers::list_strands(store).await;
+      .and(with_check_accept_car())
+      .and_then(|store, as_car| async move {
+        let res = handlers::list_strands(store, as_car).await; // Added parameter `as_car`
         match res {
           Ok(reply) => Ok(reply),
           Err(err) => Err(warp::reject::custom(err)),
@@ -107,14 +110,30 @@ mod filters {
   {
     warp::path::param()
       .and(with_store(store))
+      .and(with_check_accept_car())
       .and(warp::query::<QueryParams>())
-      .and_then(|query, store, params: QueryParams| async move {
-        let res = handlers::query(query, store, params.full).await;
-        match res {
-          Ok(reply) => Ok(reply),
-          Err(err) => Err(warp::reject::custom(err)),
-        }
-      })
+      .and_then(
+        |query, store, as_car: bool, params: QueryParams| async move {
+          let res = handlers::query(query, store, as_car, params.full).await; // Update to include `as_car`
+          match res {
+            Ok(reply) => Ok(reply),
+            Err(err) => Err(warp::reject::custom(err)),
+          }
+        },
+      )
+  }
+
+  // checks the header for format accept
+  fn with_check_accept_car(
+  ) -> impl Filter<Extract = (bool,), Error = warp::Rejection> + Clone {
+    warp::header::optional::<String>("accept").map(|accept: Option<String>| {
+      accept
+        .map(|accept| {
+          accept.contains("application/octet-stream")
+            || accept.contains("application/vnd.ipld.car")
+        })
+        .unwrap_or(false)
+    })
   }
 
   fn with_store(
@@ -149,6 +168,7 @@ mod handlers {
   pub async fn query(
     q: AnyQuery,
     store: Arc<SqlStore>,
+    as_car: bool,
     full: bool,
   ) -> Result<impl warp::Reply, HttpError> {
     let result = match q {
@@ -186,24 +206,26 @@ mod handlers {
         }
       }
     };
-    Ok(warp::reply::json(&result))
+    Ok(result.to_response(as_car).await)
   }
 
   pub async fn list_strands(
     store: Arc<SqlStore>,
+    as_car: bool,
   ) -> Result<impl warp::Reply, HttpError> {
     let strands: Vec<_> = store.strands().await?.try_collect().await?;
     let result = models::AnyResult::Strands {
       items: strands.into_iter().map(|s| (*s).clone().into()).collect(),
     };
-    Ok(warp::reply::json(&result))
+    Ok(result.to_response(as_car).await)
   }
 }
 
 mod models {
   use super::*;
   use serde::{Deserialize, Serialize};
-  use twine::twine_core::twine::Tagged;
+  use twine::twine_core::{car::to_car_stream, twine::Tagged};
+  use warp::reply::Reply;
 
   // The api can return a json object with an "items" array
   // which possibly contains a "strand" object containing the owning strand
@@ -225,5 +247,30 @@ mod models {
     Error {
       error: String,
     },
+  }
+
+  impl AnyResult {
+    pub async fn to_response(self, as_car: bool) -> warp::reply::Response {
+      if as_car {
+        let items = match self {
+          AnyResult::Tixels { items, .. } => items
+            .into_iter()
+            .map(|t| AnyTwine::from(t.unpack()))
+            .collect::<Vec<_>>(),
+          AnyResult::Strands { items } => items
+            .into_iter()
+            .map(|s| AnyTwine::from(s.unpack()))
+            .collect::<Vec<_>>(),
+          _ => return warp::reply::json(&self).into_response(),
+        };
+        let carstream =
+          to_car_stream(futures::stream::iter(items), vec![Cid::default()]);
+        use futures::StreamExt;
+        let car = carstream.concat().await;
+        car.into_response()
+      } else {
+        warp::reply::json(&self).into_response()
+      }
+    }
   }
 }
