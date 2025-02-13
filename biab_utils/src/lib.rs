@@ -8,6 +8,9 @@ pub use tcp_server::*;
 mod messages;
 pub use messages::*;
 
+mod hsm_signer;
+pub use hsm_signer::*;
+
 pub async fn handle_shutdown_signal(shutdown: Arc<Notify>) {
   use tokio::signal::{
     ctrl_c,
