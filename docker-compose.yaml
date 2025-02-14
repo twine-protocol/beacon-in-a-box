@@ -10,7 +10,8 @@ services:
       - RNG_SCRIPT=python3 /app/python_example/get_randomness.py
       - RNG_STORAGE_PATH=/randomness
       - PRIVATE_KEY_PATH=/data/key.pem
-      - STRAND_JSON_PATH=/data/bafyriqbxdqyijm63m3kg36khsfcoi2seliicqwakxowcstyzwjunwrog4rf2fchtmkbp4fdeedtjazemrrp46w2nztuiwmip2uyusxhwxzrbo.strand.json
+      - STRAND_DETAILS_PATH=/data/strand_details.json
+      - STRAND_JSON_PATH=/data/strand.json
       - STITCH_CONFIG_PATH=/data/stitch-map.yaml
       - LEAD_TIME_SECONDS=10
     volumes:

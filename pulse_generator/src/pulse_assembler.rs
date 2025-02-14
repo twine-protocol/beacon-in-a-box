@@ -4,7 +4,6 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 use twine::{
   prelude::*,
-  twine_builder::RingSigner,
   twine_core::{crypto::PublicKey, twine::CrossStitches},
 };
 
@@ -71,16 +70,16 @@ impl AssemblyState {
   }
 }
 
-pub struct PulseAssembler<S: Store + Resolver> {
-  builder: TwineBuilder<PublicKey, RingSigner>,
+pub struct PulseAssembler<S: Store + Resolver, G: Signer<Key = PublicKey>> {
+  builder: TwineBuilder<PublicKey, G>,
   strand: Arc<Strand>,
   store: S,
   rng_path: String,
   state: Arc<Mutex<Option<AssemblyState>>>,
 }
 
-impl<S: Store + Resolver> PulseAssembler<S> {
-  pub fn new(signer: RingSigner, strand: Arc<Strand>, store: S) -> Self {
+impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
+  pub fn new(signer: G, strand: Arc<Strand>, store: S) -> Self {
     Self {
       builder: TwineBuilder::new(signer),
       strand,

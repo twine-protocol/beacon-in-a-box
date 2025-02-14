@@ -3,7 +3,10 @@ use biab_utils::{handle_shutdown_signal, init_logger};
 use chrono::Duration;
 use std::{env, sync::Arc};
 use tokio::{net::TcpStream, process::Command, sync::Notify};
-use twine::{prelude::*, twine_core::twine::CrossStitches};
+use twine::{
+  prelude::*,
+  twine_core::{crypto::PublicKey, twine::CrossStitches},
+};
 mod pulse_assembler;
 use pulse_assembler::*;
 mod cid_str;
@@ -19,16 +22,12 @@ async fn main() -> Result<()> {
   let shutdown = Arc::new(Notify::new());
   tokio::spawn(handle_shutdown_signal(shutdown.clone()));
 
-  let key_path = env::var("PRIVATE_KEY_PATH")?;
-  let pem = std::fs::read_to_string(key_path)?;
-  let signer = twine::twine_builder::RingSigner::from_pem(pem)?;
   let strand_path = env::var("STRAND_JSON_PATH")?;
-  let json = std::fs::read_to_string(strand_path)?;
-  let strand = Arc::new(Strand::from_tagged_dag_json(json)?);
   // let store = twine::twine_core::store::MemoryStore::new();
+  let strand = retrieve_or_create_strand(get_signer()?, &strand_path).await?;
   let store =
     twine_sql_store::SqlStore::open("mysql://root:root@db/twine").await?;
-  let assembler = PulseAssembler::new(signer, strand, store)
+  let assembler = PulseAssembler::new(get_signer()?, strand, store)
     .with_rng_path(env::var("RNG_STORAGE_PATH")?);
 
   assembler.init().await?;
@@ -36,8 +35,63 @@ async fn main() -> Result<()> {
   start_scheduler(assembler, shutdown).await
 }
 
+fn get_signer() -> Result<impl Signer<Key = PublicKey>> {
+  let key_path = env::var("PRIVATE_KEY_PATH")?;
+  let pem = std::fs::read_to_string(key_path)?;
+  let signer = twine::twine_builder::RingSigner::from_pem(pem)?;
+  Ok(signer)
+}
+
+async fn create_strand<S: Signer<Key = PublicKey>>(
+  signer: S,
+  strand_path: &str,
+) -> Result<Arc<Strand>> {
+  #[derive(Debug, serde::Deserialize)]
+  struct StrandDetails {
+    subspec: Option<String>,
+    details: Ipld,
+  }
+  let builder = TwineBuilder::new(signer);
+  let details = std::fs::read_to_string(env::var("STRAND_DETAILS_PATH")?)?;
+  let details: StrandDetails =
+    twine::twine_core::serde_ipld_dagjson::from_slice(details.as_bytes())?;
+
+  log::info!("Creating new strand with details: {:?}", details);
+  let strand = builder
+    .build_strand()
+    .subspec(details.subspec.unwrap_or("".to_string()))
+    .details(details.details)
+    .done()?;
+
+  let json = strand.tagged_dag_json_pretty();
+  std::fs::write(strand_path, json)?;
+  log::info!("Strand created and saved to {}", strand_path);
+
+  Ok(Arc::new(strand))
+}
+
+async fn retrieve_or_create_strand<S: Signer<Key = PublicKey>>(
+  signer: S,
+  strand_path: &str,
+) -> Result<Arc<Strand>> {
+  match std::fs::metadata(strand_path) {
+    Ok(_) => {
+      let json = std::fs::read_to_string(strand_path)?;
+      let strand = Arc::new(Strand::from_tagged_dag_json(json)?);
+      Ok(strand)
+    }
+    Err(e) => match e.kind() {
+      std::io::ErrorKind::NotFound => create_strand(signer, strand_path).await,
+      _ => Err(e.into()),
+    },
+  }
+}
+
 async fn start_scheduler(
-  assembler: PulseAssembler<impl Store + Resolver + 'static>,
+  assembler: PulseAssembler<
+    impl Store + Resolver + 'static,
+    impl Signer<Key = PublicKey> + Send + Sync + 'static,
+  >,
   shutdown: Arc<Notify>,
 ) -> Result<()> {
   let worker = tokio::spawn(async move {
@@ -62,7 +116,10 @@ async fn start_scheduler(
 }
 
 async fn advance(
-  assembler: &PulseAssembler<impl Store + Resolver + 'static>,
+  assembler: &PulseAssembler<
+    impl Store + Resolver + 'static,
+    impl Signer<Key = PublicKey> + 'static,
+  >,
 ) -> Result<()> {
   let lead_time_s = env::var("LEAD_TIME_SECONDS")
     .unwrap_or_else(|_| "10".to_string())
@@ -149,7 +206,10 @@ async fn refresh_stitches(
 }
 
 async fn assemble_job(
-  assembler: &PulseAssembler<impl Store + Resolver + 'static>,
+  assembler: &PulseAssembler<
+    impl Store + Resolver + 'static,
+    impl Signer<Key = PublicKey> + 'static,
+  >,
   next_cross_stitches: CrossStitches,
 ) -> Result<()> {
   let randomness = fetch_randomness().await?;
@@ -170,7 +230,10 @@ async fn assemble_job(
 }
 
 async fn publish_job(
-  assembler: &PulseAssembler<impl Store + Resolver + 'static>,
+  assembler: &PulseAssembler<
+    impl Store + Resolver + 'static,
+    impl Signer<Key = PublicKey> + 'static,
+  >,
 ) -> Result<()> {
   match assembler.publish().await {
     Ok(latest) => {
