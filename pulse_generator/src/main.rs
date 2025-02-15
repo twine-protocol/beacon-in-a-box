@@ -1,6 +1,6 @@
 use anyhow::Result;
 use biab_utils::{handle_shutdown_signal, init_logger};
-use chrono::Duration;
+use chrono::{Duration, TimeDelta};
 use std::{env, sync::Arc};
 use tokio::{net::TcpStream, process::Command, sync::Notify};
 use twine::{
@@ -128,8 +128,9 @@ async fn advance(
 
   if assembler.needs_assembly().await {
     // refresh stitches within the time window
-    let time_limit = assembler.next_state_in(lead_time).await
-      - std::time::Duration::from_secs(1);
+    let time_limit = assembler
+      .next_state_in(lead_time + TimeDelta::seconds(1))
+      .await;
 
     let prev_cross_stitches = assembler.previous_cross_stitches().await;
     let next_cross_stitches = match tokio::time::timeout(
