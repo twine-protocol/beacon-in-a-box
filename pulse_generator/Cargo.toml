@@ -20,3 +20,4 @@ serde = { version = "1.0.130", features = ["derive"] }
 chrono = { version = "0.4.39", features = ["serde"] }
 serde_yaml = "0.9.34+deprecated"
 serde_with = "3.12.0"
+yubihsm = { version = "0.42.1", features = ["http-server", "usb", "passwords", "untested"] }

@@ -14,6 +14,42 @@ mod payload;
 mod stitch_config;
 mod timing;
 
+enum EitherSigner {
+  Hsm(biab_utils::HsmSigner),
+  Ring(twine::twine_builder::RingSigner),
+}
+
+impl twine::twine_builder::Signer for EitherSigner {
+  type Key = PublicKey;
+
+  fn sign<T: AsRef<[u8]>>(
+    &self,
+    data: T,
+  ) -> std::result::Result<twine::twine_core::crypto::Signature, SigningError>
+  {
+    let _data = data.as_ref();
+    match self {
+      EitherSigner::Hsm(signer) => signer.sign(_data),
+      EitherSigner::Ring(signer) => signer.sign(_data),
+    }
+  }
+
+  fn public_key(&self) -> Self::Key {
+    match self {
+      EitherSigner::Hsm(signer) => signer.public_key(),
+      EitherSigner::Ring(signer) => signer.public_key(),
+    }
+  }
+}
+
+fn parse_u16(s: &str) -> Result<u16> {
+  let (prefix, str) = s.split_at(2);
+  match prefix {
+    "0x" => Ok(u16::from_str_radix(str, 16)?),
+    _ => Ok(s.parse()?),
+  }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
   init_logger();
@@ -25,6 +61,7 @@ async fn main() -> Result<()> {
   let strand_path = env::var("STRAND_JSON_PATH")?;
   // let store = twine::twine_core::store::MemoryStore::new();
   let strand = retrieve_or_create_strand(get_signer()?, &strand_path).await?;
+
   let store =
     twine_sql_store::SqlStore::open("mysql://root:root@db/twine").await?;
   let assembler = PulseAssembler::new(get_signer()?, strand, store)
@@ -35,11 +72,43 @@ async fn main() -> Result<()> {
   start_scheduler(assembler, shutdown).await
 }
 
-fn get_signer() -> Result<impl Signer<Key = PublicKey>> {
+fn get_hsm_signer() -> Result<biab_utils::HsmSigner> {
+  let hsm_url = env::var("HSM_ADDRESS")?;
+  let (domain, port) = match hsm_url.split_once(":") {
+    Some((domain, port)) => (domain.to_string(), port.parse::<u16>()?),
+    None => (hsm_url, 12345),
+  };
+  use yubihsm::{connector::Connector, Client, Credentials};
+  let connector = Connector::http(&yubihsm::HttpConfig {
+    addr: domain,
+    port,
+    timeout_ms: 6000,
+  });
+
+  let auth_key_id = env::var("HSM_AUTH_KEY_ID")
+    .unwrap_or("1".into())
+    .parse::<u16>()?;
+  let password = env::var("HSM_PASSWORD")?;
+  // might also be in hex
+  let signing_key_id = parse_u16(&env::var("HSM_SIGNING_KEY_ID")?)?;
+  let creds = Credentials::from_password(auth_key_id, password.as_bytes());
+  let client = Client::open(connector, creds, true)?;
+  let signer = biab_utils::HsmSigner::try_new(client, signing_key_id)?;
+  Ok(signer)
+}
+
+fn get_ring_signer() -> Result<twine::twine_builder::RingSigner> {
   let key_path = env::var("PRIVATE_KEY_PATH")?;
   let pem = std::fs::read_to_string(key_path)?;
   let signer = twine::twine_builder::RingSigner::from_pem(pem)?;
   Ok(signer)
+}
+
+fn get_signer() -> Result<EitherSigner> {
+  match env::var("PRIVATE_KEY_PATH") {
+    Ok(_) => Ok(EitherSigner::Ring(get_ring_signer()?)),
+    Err(_) => Ok(EitherSigner::Hsm(get_hsm_signer()?)),
+  }
 }
 
 async fn create_strand<S: Signer<Key = PublicKey>>(

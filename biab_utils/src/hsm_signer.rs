@@ -1,8 +1,9 @@
+use rsa::pkcs1::EncodeRsaPublicKey;
 use twine::prelude::*;
 use twine::twine_core::crypto::Signature;
 use twine::{twine_builder::Signer, twine_core::crypto::PublicKey};
 use yubihsm::object::Type;
-use yubihsm::{rsa::Algorithm, Client};
+use yubihsm::{asymmetric::Algorithm, Client};
 
 pub struct HsmSigner {
   client: Client,
@@ -15,35 +16,29 @@ fn get_public_key(
   key_id: u16,
 ) -> Result<PublicKey, anyhow::Error> {
   let public_key = client.get_public_key(key_id)?;
-  let public_key = public_key.as_ref();
-  let modulus = public_key.len() * 8;
+  let n = public_key.as_ref();
   let info = client.get_object_info(key_id, Type::AsymmetricKey)?;
   // for now only support RSA
-  let alg = info
-    .algorithm
-    .rsa()
-    .ok_or(anyhow::anyhow!("Only RSA supported"))?;
+  let alg = info.algorithm.asymmetric().ok_or(anyhow::anyhow!(
+    "Only Asymmetric RSA supported. Found: {:?}",
+    info.algorithm
+  ))?;
   let signing_alg = match alg {
-    Algorithm::Pkcs1(sha) => match sha {
-      yubihsm::rsa::pkcs1::Algorithm::Sha256 => {
-        twine::twine_core::crypto::SignatureAlgorithm::Sha256Rsa(modulus)
-      }
-      // yubihsm::rsa::pkcs1::Algorithm::Sha384 => {
-      //   twine::twine_core::crypto::SignatureAlgorithm::Sha384Rsa(modulus)
-      // }
-      // yubihsm::rsa::pkcs1::Algorithm::Sha512 => {
-      //   twine::twine_core::crypto::SignatureAlgorithm::Sha512Rsa(modulus)
-      // }
-      _ => {
-        return Err(anyhow::anyhow!("Unsupported RSA signing algorithm"));
-      }
-    },
+    Algorithm::Rsa2048 => {
+      twine::twine_core::crypto::SignatureAlgorithm::Sha256Rsa(2048)
+    }
     _ => {
-      return Err(anyhow::anyhow!("Unsupported key type"));
+      return Err(anyhow::anyhow!("Unsupported key type. Found: {:?}", alg));
     }
   };
 
-  Ok(PublicKey::new(signing_alg, public_key.into()))
+  let n = rsa::BigUint::from_bytes_be(n);
+  let e = rsa::BigUint::from_bytes_be(&vec![0x01, 0x00, 0x01]);
+  let asn1der = rsa::RsaPublicKey::new(n, e)?
+    .to_pkcs1_der()
+    .map_err(|e| anyhow::anyhow!("Failed to encode public key: {}", e))?;
+
+  Ok(PublicKey::new(signing_alg, asn1der.as_bytes().into()))
 }
 
 impl HsmSigner {

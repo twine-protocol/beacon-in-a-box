@@ -210,6 +210,7 @@ dependencies = [
  "chrono",
  "log",
  "rmp-serde",
+ "rsa",
  "serde",
  "simple_logger",
  "tokio",
@@ -2255,6 +2256,7 @@ dependencies = [
  "twine",
  "twine_http_store",
  "twine_sql_store",
+ "yubihsm",
 ]
 
 [[package]]
