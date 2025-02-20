@@ -7,20 +7,18 @@ use twine::{
   twine_core::{crypto::PublicKey, twine::CrossStitches},
 };
 
-use super::payload::*;
-
-const PULSE_PERIOD_MINUTES: i64 = 1;
+use twine_spec_rng::{PayloadBuilder, RandomnessPayload, RngStrandDetails};
 
 #[derive(Debug, Clone)]
 pub enum AssemblyState {
-  BeginStrand,
+  BeginStrand(Duration),
   Prepared { rand: [u8; 64], prepared: Twine },
   Released { rand: [u8; 64], latest: Twine },
 }
 
 impl AssemblyState {
-  pub fn new_from_scratch() -> Self {
-    AssemblyState::BeginStrand
+  pub fn new_from_scratch(period: Duration) -> Self {
+    AssemblyState::BeginStrand(period)
   }
 
   pub fn new_from_latest(latest: Twine, rand: [u8; 64]) -> Self {
@@ -32,10 +30,9 @@ impl AssemblyState {
     lead_time: Duration,
   ) -> std::time::Duration {
     let now = chrono::Utc::now();
-    let period = chrono::Duration::minutes(PULSE_PERIOD_MINUTES);
     match self {
-      AssemblyState::BeginStrand => {
-        let next_ts = crate::timing::next_truncated_time(period);
+      AssemblyState::BeginStrand(period) => {
+        let next_ts = crate::timing::next_truncated_time(*period);
         let next_time = next_ts - lead_time;
         next_time
           .signed_duration_since(now)
@@ -59,6 +56,12 @@ impl AssemblyState {
           .expect("payload")
           .timestamp();
 
+        let period = latest
+          .strand()
+          .extract_details::<RngStrandDetails>()
+          .unwrap()
+          .period;
+
         let next_ts = crate::timing::next_pulse_timestamp(prev_ts, period);
         let next_time = next_ts - lead_time;
         next_time
@@ -73,6 +76,7 @@ impl AssemblyState {
 pub struct PulseAssembler<S: Store + Resolver, G: Signer<Key = PublicKey>> {
   builder: TwineBuilder<PublicKey, G>,
   strand: Arc<Strand>,
+  period: Duration,
   store: S,
   rng_path: String,
   state: Arc<Mutex<Option<AssemblyState>>>,
@@ -80,12 +84,17 @@ pub struct PulseAssembler<S: Store + Resolver, G: Signer<Key = PublicKey>> {
 
 impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
   pub fn new(signer: G, strand: Arc<Strand>, store: S) -> Self {
+    let period = strand
+      .extract_details::<RngStrandDetails>()
+      .expect("strand details")
+      .period;
     Self {
       builder: TwineBuilder::new(signer),
       strand,
       store,
       rng_path: "./randomness".to_string(),
       state: Arc::new(Mutex::new(None)),
+      period,
     }
   }
 
@@ -120,7 +129,9 @@ impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
     let latest = self.latest().await?;
     // if there is no latest, we are starting from scratch
     if latest.is_none() {
-      self.set_state(AssemblyState::new_from_scratch()).await;
+      self
+        .set_state(AssemblyState::new_from_scratch(self.period))
+        .await;
       return Ok(());
     }
 
@@ -139,7 +150,7 @@ impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
       .as_ref()
       .expect("state must be loaded by calling init()")
     {
-      AssemblyState::BeginStrand => true,
+      AssemblyState::BeginStrand(_) => true,
       AssemblyState::Prepared { .. } => false,
       AssemblyState::Released { .. } => true,
     }
@@ -153,7 +164,7 @@ impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
       .as_ref()
       .expect("state must be loaded by calling init()")
     {
-      AssemblyState::BeginStrand => false,
+      AssemblyState::BeginStrand(_) => false,
       AssemblyState::Prepared { .. } => true,
       AssemblyState::Released { .. } => false,
     }
@@ -198,7 +209,7 @@ impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
 
   pub async fn previous_cross_stitches(&self) -> CrossStitches {
     match self.state.lock().await.as_ref().expect("state") {
-      AssemblyState::BeginStrand => CrossStitches::default(),
+      AssemblyState::BeginStrand(_) => CrossStitches::default(),
       AssemblyState::Prepared { prepared, .. } => prepared.cross_stitches(),
       AssemblyState::Released { latest, .. } => latest.cross_stitches(),
     }
@@ -221,40 +232,28 @@ impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
     next_randomness: &[u8; 64],
     cross_stitches: CrossStitches,
   ) -> Result<()> {
-    use twine::twine_core::multihash_codetable::MultihashDigest;
-
     if !self.needs_assembly().await {
       return Err(anyhow::anyhow!("Called prepare when it wasn't needed"));
     }
 
-    let period = chrono::Duration::minutes(PULSE_PERIOD_MINUTES);
-
     let next = match self.state().await {
-      AssemblyState::BeginStrand => {
-        let pre = self.strand.hasher().digest(next_randomness);
+      AssemblyState::BeginStrand(_) => {
         // start the strand
         self.store.save(self.strand.clone()).await?;
+        let pb = PayloadBuilder::new(vec![0; 64], next_randomness.to_vec());
         self
           .builder
           .build_first((*self.strand).clone())
           .cross_stitches(cross_stitches)
-          .payload(RandomnessPayload::new_start(pre, period)?)
-          .done()?
+          .build_payload_then_done(pb.builder())?
       }
       AssemblyState::Released { latest, rand } => {
-        let pre = self.strand.hasher().digest(next_randomness);
-        let payload = RandomnessPayload::from_rand(
-          rand.to_vec(),
-          pre,
-          latest.tixel(),
-          period,
-        )?;
+        let pb = PayloadBuilder::new(rand.to_vec(), next_randomness.to_vec());
         self
           .builder
           .build_next(&latest)
           .cross_stitches(cross_stitches)
-          .payload(payload)
-          .done()?
+          .build_payload_then_done(pb.builder())?
       }
       _ => unreachable!(),
     };

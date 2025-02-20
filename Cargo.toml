@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
   "pulse_generator",
   "biab_utils",

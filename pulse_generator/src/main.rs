@@ -10,9 +10,11 @@ use twine::{
 mod pulse_assembler;
 use pulse_assembler::*;
 mod cid_str;
-mod payload;
+// mod payload;
 mod stitch_config;
 mod timing;
+
+const PULSE_PERIOD_MINUTES: i64 = 1;
 
 enum EitherSigner {
   Hsm(biab_utils::HsmSigner),
@@ -115,21 +117,36 @@ async fn create_strand<S: Signer<Key = PublicKey>>(
   signer: S,
   strand_path: &str,
 ) -> Result<Arc<Strand>> {
-  #[derive(Debug, serde::Deserialize)]
+  #[derive(Debug, serde::Serialize, serde::Deserialize)]
   struct StrandDetails {
-    subspec: Option<String>,
+    #[serde(flatten)]
+    rng_details: twine_spec_rng::RngStrandDetails,
+    #[serde(flatten)]
+    custom_details: Ipld,
+  }
+
+  #[derive(Debug, serde::Deserialize)]
+  struct StrandConfig {
     details: Ipld,
   }
+
   let builder = TwineBuilder::new(signer);
-  let details = std::fs::read_to_string(env::var("STRAND_DETAILS_PATH")?)?;
-  let details: StrandDetails =
-    twine::twine_core::serde_ipld_dagjson::from_slice(details.as_bytes())?;
+  let cfg = std::fs::read_to_string(env::var("STRAND_CONFIG_PATH")?)?;
+  let cfg: StrandConfig =
+    twine::twine_core::serde_ipld_dagjson::from_slice(cfg.as_bytes())?;
+
+  let details = StrandDetails {
+    rng_details: twine_spec_rng::RngStrandDetails {
+      period: TimeDelta::minutes(PULSE_PERIOD_MINUTES),
+    },
+    custom_details: cfg.details,
+  };
 
   log::info!("Creating new strand with details: {:?}", details);
   let strand = builder
     .build_strand()
-    .subspec(details.subspec.unwrap_or("".to_string()))
-    .details(details.details)
+    .subspec(twine_spec_rng::subspec_string())
+    .details(details)
     .done()?;
 
   let json = strand.tagged_dag_json_pretty();
