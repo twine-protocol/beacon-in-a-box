@@ -8,10 +8,10 @@ name = "pulse_generator"
 path = "src/main.rs"
 
 [dependencies]
-twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "409df762d934c528c23acf6728e13a115d992f72", features = ["build", "rsa"] }
-twine_http_store =  { git = "https://github.com/twine-protocol/twine-rs.git", rev = "409df762d934c528c23acf6728e13a115d992f72", package = "twine_http_store" }
-twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "409df762d934c528c23acf6728e13a115d992f72", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
-twine_spec_rng = { git = "https://github.com/twine-protocol/twine_spec_rng", rev = "7ecda82d73e3e0f575707dcc03fb4608612c3ad9" }
+twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "3b66b8bf4e8e0b8592ee3e0df075b010937b5a12", features = ["build", "rsa"] }
+twine_http_store =  { git = "https://github.com/twine-protocol/twine-rs.git", rev = "3b66b8bf4e8e0b8592ee3e0df075b010937b5a12", package = "twine_http_store" }
+twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "3b66b8bf4e8e0b8592ee3e0df075b010937b5a12", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
+twine_spec_rng = { git = "https://github.com/twine-protocol/twine_spec_rng", rev = "7d035f328641f5a253dbb1d94906c8093085beac" }
 biab_utils = { path = "../biab_utils" }
 futures = "0.3.31"
 tokio = { version = "1.43.0", features = ["full"] }

@@ -74,7 +74,7 @@ impl AssemblyState {
 }
 
 pub struct PulseAssembler<S: Store + Resolver, G: Signer<Key = PublicKey>> {
-  builder: TwineBuilder<PublicKey, G>,
+  builder: TwineBuilder<2, G>,
   strand: Arc<Strand>,
   period: Duration,
   store: S,
