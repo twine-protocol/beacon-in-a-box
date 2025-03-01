@@ -5,21 +5,23 @@ services:
       dockerfile: Dockerfile.base
       args:
         - APP_NAME=pulse_generator
+    # env_file:
+    #   - .env
     environment:
       - LOG_LEVEL=debug
-      - RNG_SCRIPT=python3 /app/python_example/get_randomness.py
-      - RNG_STORAGE_PATH=/randomness
+      - PRIVATE_KEY_PATH=/data/private.pkcs8.pem
+      - LEAD_TIME_SECONDS=2
       # - HSM_ADDRESS=host.docker.internal:12345
       # - HSM_AUTH_KEY_ID=1
       # - HSM_PASSWORD=password
       # - HSM_SIGNING_KEY_ID=0x6161
-      - PRIVATE_KEY_PATH=/data/rsa.pem
-      - STRAND_CONFIG_PATH=/data/strand_config.json
+      - RNG_SCRIPT=python3 /app/python_example/get_randomness.py
+      - RNG_STORAGE_PATH=/randomness
+      - STRAND_CONFIG_PATH=/data/strand-config.json
       - STRAND_JSON_PATH=/data/strand.json
       - STITCH_CONFIG_PATH=/data/stitch-map.yaml
-      - LEAD_TIME_SECONDS=10
     volumes:
-      - .twine:/data
+      - .config:/data
       - randomness:/randomness
     command: ["/app/pulse_generator"]
     depends_on:
