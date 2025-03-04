@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "pulse_generator",
   "biab_utils",
-  "data_sync", "http_portal",
+  "data_sync",
+  "http_portal",
 ]
 

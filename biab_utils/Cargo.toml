@@ -8,7 +8,7 @@ name = "biab_utils"
 path = "src/lib.rs"
 
 [dependencies]
-twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "3b66b8bf4e8e0b8592ee3e0df075b010937b5a12", features = ["build"] }
+twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "e22a80ee7bc3eaa191214f961b511b564496232b", features = ["build"] }
 tokio = { version = "1.43.0", features = ["full"] }
 log = "0.4.25"
 simple_logger = "5.0.0"
