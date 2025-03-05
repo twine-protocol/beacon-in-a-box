@@ -8,7 +8,7 @@ services:
     # env_file:
     #   - .env
     environment:
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=info
       - PRIVATE_KEY_PATH=/data/private.pkcs8.pem
       - LEAD_TIME_SECONDS=2
       # - HSM_ADDRESS=host.docker.internal:12345
@@ -39,7 +39,7 @@ services:
     environment:
       - REMOTE_STORE_ADDRESS=http://host.docker.internal:8787
       - REMOTE_STORE_API_KEY=dev
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=info
       - SYNC_PERIOD_SECONDS=30
     command: ["/app/data_sync"]
     depends_on:
@@ -56,7 +56,7 @@ services:
       args:
         - APP_NAME=http_portal
     environment:
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=info
     command: ["/app/http_portal"]
     ports:
       - "8080:80"

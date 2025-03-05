@@ -46,9 +46,24 @@ mod filters {
   // GET /:query?full -> also include the strand in the result
 
   #[derive(Debug, Deserialize)]
+  struct Truthy(Option<String>);
+
+  impl From<Truthy> for bool {
+    fn from(t: Truthy) -> bool {
+      t.0.map_or(false, |s| s.to_ascii_lowercase() != "false")
+    }
+  }
+
+  impl Default for Truthy {
+    fn default() -> Self {
+      Truthy(None)
+    }
+  }
+
+  #[derive(Debug, Deserialize)]
   struct QueryParams {
     #[serde(default)]
-    full: bool,
+    full: Truthy,
   }
 
   pub fn api(
@@ -107,7 +122,8 @@ mod filters {
       .and(warp::query::<QueryParams>())
       .and_then(
         |query, store, as_car: bool, params: QueryParams| async move {
-          let res = handlers::query(query, store, as_car, params.full).await; // Update to include `as_car`
+          let res =
+            handlers::query(query, store, as_car, params.full.into()).await; // Update to include `as_car`
           match res {
             Ok(reply) => Ok(reply),
             Err(err) => Err(warp::reject::custom(err)),
@@ -164,6 +180,7 @@ mod handlers {
     as_car: bool,
     full: bool,
   ) -> Result<impl warp::Reply, HttpError> {
+    log::debug!("Query: {:?}, full: {}", q, full);
     let result = match q {
       AnyQuery::Strand(strand_cid) => {
         let strand = store.resolve_strand(&strand_cid).await?;
@@ -246,9 +263,10 @@ mod models {
     pub async fn to_response(self, as_car: bool) -> warp::reply::Response {
       if as_car {
         let items = match self {
-          AnyResult::Tixels { items, .. } => items
+          AnyResult::Tixels { items, strand } => items
             .into_iter()
             .map(|t| AnyTwine::from(t.unpack()))
+            .chain(strand.into_iter().map(|s| AnyTwine::from(s.unpack())))
             .collect::<Vec<_>>(),
           AnyResult::Strands { items } => items
             .into_iter()

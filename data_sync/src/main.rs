@@ -103,7 +103,15 @@ async fn worker(
 ) -> Result<()> {
   let worker = tokio::spawn(async move {
     loop {
-      signals.start_sync.notified().await;
+      tokio::select! {
+        _ = signals.shutdown.notified() => {
+          log::info!("Stopping tasks...");
+          break;
+        }
+        _ = signals.start_sync.notified() => {
+          log::debug!("Starting sync...");
+        }
+      }
 
       tokio::select! {
         _ = signals.shutdown.notified() => {
