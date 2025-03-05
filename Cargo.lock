@@ -3559,7 +3559,7 @@ dependencies = [
 [[package]]
 name = "twine_spec_rng"
 version = "0.1.0"
-source = "git+https://github.com/twine-protocol/twine_spec_rng?rev=69f85bfd1eb7adf6db3f1b6dc1f0e3be05849fda#69f85bfd1eb7adf6db3f1b6dc1f0e3be05849fda"
+source = "git+https://github.com/twine-protocol/twine_spec_rng?rev=38ae990e71d6839a18cc99f32bd3bcedea993e5e#38ae990e71d6839a18cc99f32bd3bcedea993e5e"
 dependencies = [
  "chrono",
  "serde",

@@ -11,7 +11,7 @@ path = "src/main.rs"
 twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "e22a80ee7bc3eaa191214f961b511b564496232b", features = ["build", "rsa"] }
 twine_http_store =  { git = "https://github.com/twine-protocol/twine-rs.git", rev = "e22a80ee7bc3eaa191214f961b511b564496232b", package = "twine_http_store" }
 twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "e22a80ee7bc3eaa191214f961b511b564496232b", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
-twine_spec_rng = { git = "https://github.com/twine-protocol/twine_spec_rng", rev = "69f85bfd1eb7adf6db3f1b6dc1f0e3be05849fda" }
+twine_spec_rng = { git = "https://github.com/twine-protocol/twine_spec_rng", rev = "38ae990e71d6839a18cc99f32bd3bcedea993e5e" }
 biab_utils = { path = "../biab_utils" }
 futures = "0.3.31"
 tokio = { version = "1.43.0", features = ["full"] }
