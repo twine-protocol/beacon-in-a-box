@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     networks:
       - internal
+      - external
 
   data_sync:
     build:
