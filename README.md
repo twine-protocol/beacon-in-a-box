@@ -4,10 +4,16 @@ A set of docker images to create a Twine randomness beacon. This is built with
 the [twine-rs](https://github.com/twine-protocol/twine-rs) library using
 version 2 of the twine specification.
 
+## What does it do?
+
+This collection of docker services publishes and stores randomness
+pulses in the form of "tixels", the basic data block of the Twine
+protocol. These tixels are hash chained together forming a "strand".
+
 ## What's in the box?
 
 The contents are separated into a few docker services that are configured
-using a docker-compose.yaml file. They are:
+using a `docker-compose.yaml` file. They are:
 
 1. A generator which is the main process that schedules the construction
 and release of pulse data in the form of twine tixels. The twine data
