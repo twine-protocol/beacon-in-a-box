@@ -185,13 +185,13 @@ mod handlers {
       AnyQuery::Strand(strand_cid) => {
         let strand = store.resolve_strand(&strand_cid).await?;
         models::AnyResult::Strands {
-          items: vec![(*strand.unpack()).clone().into()],
+          items: vec![strand.unpack().clone().into()],
         }
       }
       AnyQuery::One(query) => {
         let twine = store.resolve(query).await?;
         let strand = if full {
-          let strand = (*twine.strand()).clone().into();
+          let strand = twine.strand().clone().into();
           Some(strand)
         } else {
           None
@@ -225,7 +225,7 @@ mod handlers {
   ) -> Result<impl warp::Reply, HttpError> {
     let strands: Vec<_> = store.strands().await?.try_collect().await?;
     let result = models::AnyResult::Strands {
-      items: strands.into_iter().map(|s| (*s).clone().into()).collect(),
+      items: strands.into_iter().map(|s| s.clone().into()).collect(),
     };
     Ok(result.to_response(as_car).await)
   }

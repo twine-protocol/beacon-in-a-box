@@ -38,7 +38,7 @@ services:
       args:
         - APP_NAME=data_sync
     environment:
-      - REMOTE_STORE_ADDRESS=http://host.docker.internal:8787
+      - REMOTE_STORE_ADDRESS=http://localhost:8787
       - REMOTE_STORE_API_KEY=dev
       - LOG_LEVEL=info
       - SYNC_PERIOD_SECONDS=30

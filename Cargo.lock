@@ -3482,7 +3482,7 @@ dependencies = [
 [[package]]
 name = "twine"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=e22a80ee7bc3eaa191214f961b511b564496232b#e22a80ee7bc3eaa191214f961b511b564496232b"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=dab681d0fa3a00a34a280fc77955ba9f28b81b16#dab681d0fa3a00a34a280fc77955ba9f28b81b16"
 dependencies = [
  "twine_builder",
  "twine_core",
@@ -3491,7 +3491,7 @@ dependencies = [
 [[package]]
 name = "twine_builder"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=e22a80ee7bc3eaa191214f961b511b564496232b#e22a80ee7bc3eaa191214f961b511b564496232b"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=dab681d0fa3a00a34a280fc77955ba9f28b81b16#dab681d0fa3a00a34a280fc77955ba9f28b81b16"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3511,7 +3511,7 @@ dependencies = [
 [[package]]
 name = "twine_core"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=e22a80ee7bc3eaa191214f961b511b564496232b#e22a80ee7bc3eaa191214f961b511b564496232b"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=dab681d0fa3a00a34a280fc77955ba9f28b81b16#dab681d0fa3a00a34a280fc77955ba9f28b81b16"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3544,7 +3544,7 @@ dependencies = [
 [[package]]
 name = "twine_http_store"
 version = "0.0.1"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=e22a80ee7bc3eaa191214f961b511b564496232b#e22a80ee7bc3eaa191214f961b511b564496232b"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=dab681d0fa3a00a34a280fc77955ba9f28b81b16#dab681d0fa3a00a34a280fc77955ba9f28b81b16"
 dependencies = [
  "async-trait",
  "backon",
@@ -3559,7 +3559,7 @@ dependencies = [
 [[package]]
 name = "twine_spec_rng"
 version = "0.1.0"
-source = "git+https://github.com/twine-protocol/twine_spec_rng?rev=38ae990e71d6839a18cc99f32bd3bcedea993e5e#38ae990e71d6839a18cc99f32bd3bcedea993e5e"
+source = "git+https://github.com/twine-protocol/twine_spec_rng?rev=7ea84c8fe825e2bff286e82deafeac3ced05280b#7ea84c8fe825e2bff286e82deafeac3ced05280b"
 dependencies = [
  "chrono",
  "serde",
@@ -3569,7 +3569,7 @@ dependencies = [
 [[package]]
 name = "twine_sql_store"
 version = "0.1.0"
-source = "git+https://github.com/twine-protocol/twine-rs.git?rev=e22a80ee7bc3eaa191214f961b511b564496232b#e22a80ee7bc3eaa191214f961b511b564496232b"
+source = "git+https://github.com/twine-protocol/twine-rs.git?rev=dab681d0fa3a00a34a280fc77955ba9f28b81b16#dab681d0fa3a00a34a280fc77955ba9f28b81b16"
 dependencies = [
  "async-trait",
  "futures",

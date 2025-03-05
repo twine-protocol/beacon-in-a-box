@@ -116,7 +116,7 @@ fn get_signer() -> Result<EitherSigner> {
 async fn create_strand<S: Signer<Key = PublicKey>>(
   signer: S,
   strand_path: &str,
-) -> Result<Arc<Strand>> {
+) -> Result<Strand> {
   #[derive(Debug, serde::Serialize, serde::Deserialize)]
   struct StrandDetails {
     #[serde(flatten)]
@@ -153,17 +153,17 @@ async fn create_strand<S: Signer<Key = PublicKey>>(
   std::fs::write(strand_path, json)?;
   log::info!("Strand created and saved to {}", strand_path);
 
-  Ok(Arc::new(strand))
+  Ok(strand)
 }
 
 async fn retrieve_or_create_strand<S: Signer<Key = PublicKey>>(
   signer: S,
   strand_path: &str,
-) -> Result<Arc<Strand>> {
+) -> Result<Strand> {
   match std::fs::metadata(strand_path) {
     Ok(_) => {
       let json = std::fs::read_to_string(strand_path)?;
-      let strand = Arc::new(Strand::from_tagged_dag_json(json)?);
+      let strand = Strand::from_tagged_dag_json(json)?;
       Ok(strand)
     }
     Err(e) => match e.kind() {

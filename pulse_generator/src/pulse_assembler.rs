@@ -75,7 +75,7 @@ impl AssemblyState {
 
 pub struct PulseAssembler<S: Store + Resolver, G: Signer<Key = PublicKey>> {
   builder: TwineBuilder<2, G>,
-  strand: Arc<Strand>,
+  strand: Strand,
   period: Duration,
   store: S,
   rng_path: String,
@@ -83,7 +83,7 @@ pub struct PulseAssembler<S: Store + Resolver, G: Signer<Key = PublicKey>> {
 }
 
 impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
-  pub fn new(signer: G, strand: Arc<Strand>, store: S) -> Self {
+  pub fn new(signer: G, strand: Strand, store: S) -> Self {
     let period = strand
       .extract_details::<RngStrandDetails>()
       .expect("strand details")
@@ -243,7 +243,7 @@ impl<S: Store + Resolver, G: Signer<Key = PublicKey>> PulseAssembler<S, G> {
         let pb = PayloadBuilder::new(vec![0; 64], next_randomness.to_vec());
         self
           .builder
-          .build_first((*self.strand).clone())
+          .build_first(self.strand.clone())
           .cross_stitches(cross_stitches)
           .build_payload_then_done(pb.builder())?
       }
