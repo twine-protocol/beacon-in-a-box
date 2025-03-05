@@ -61,7 +61,7 @@ Generate an RSA private key (skip this if using HSM).
 bash keygen.sh .config
 ```
 
-Create a `strand-config.json` file specifying the metadata to include in the
+Create a `.config/strand-config.json` file specifying the metadata to include in the
 strand definition. All of this information is vendor specific and intended
 to describe the strand, its owner, and scope.
 
@@ -77,7 +77,7 @@ Example:
 }
 ```
 
-Create a `stitch-map.yaml` which controls what strand data to pull and
+Create a `.config/stitch-map.yaml` which controls what strand data to pull and
 stitch. This only affects the local strand. Upon creation the strand CID
 should be shared with the owners of the external strands to enable them
 to stitch your strand in kind.
