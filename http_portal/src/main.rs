@@ -2,7 +2,7 @@ use anyhow::Result;
 use biab_utils::{handle_shutdown_signal, init_logger};
 use std::{env, sync::Arc};
 use tokio::sync::Notify;
-use twine::prelude::*;
+use twine_protocol::prelude::*;
 use twine_sql_store::SqlStore;
 use warp::Filter;
 
@@ -234,7 +234,7 @@ mod handlers {
 mod models {
   use super::*;
   use serde::{Deserialize, Serialize};
-  use twine::twine_core::{car::to_car_stream, twine::Tagged};
+  use twine_protocol::twine_lib::{car::to_car_stream, twine::Tagged};
   use warp::reply::Reply;
 
   // The api can return a json object with an "items" array

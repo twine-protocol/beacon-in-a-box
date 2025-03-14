@@ -2,8 +2,8 @@ use anyhow::Result;
 use biab_utils::{handle_shutdown_signal, init_logger};
 use std::{env, sync::Arc};
 use tokio::{sync::Notify, time::sleep};
-use twine::prelude::*;
-use twine_http_store::v2::HttpStore;
+use twine_protocol::prelude::*;
+use twine_protocol::twine_http_store::v2::HttpStore;
 use twine_sql_store::SqlStore;
 
 #[derive(Debug, Clone)]
@@ -32,10 +32,10 @@ async fn main() -> Result<()> {
     twine_sql_store::SqlStore::open("mysql://root:root@db/twine").await?;
 
   let remote_addr = env::var("REMOTE_STORE_ADDRESS")?;
-  use twine_http_store::{reqwest::Client, v2};
+  use twine_protocol::twine_http_store::{reqwest::Client, v2};
   let client = Client::builder()
     .default_headers({
-      use twine_http_store::reqwest::header::{
+      use twine_protocol::twine_http_store::reqwest::header::{
         HeaderMap, HeaderValue, AUTHORIZATION,
       };
       let mut headers = HeaderMap::new();

@@ -3,9 +3,9 @@ use biab_utils::{handle_shutdown_signal, init_logger};
 use chrono::{Duration, TimeDelta};
 use std::{env, sync::Arc};
 use tokio::{net::TcpStream, process::Command, sync::Notify};
-use twine::{
+use twine_protocol::{
   prelude::*,
-  twine_core::{crypto::PublicKey, twine::CrossStitches},
+  twine_lib::{crypto::PublicKey, twine::CrossStitches},
 };
 mod pulse_assembler;
 use pulse_assembler::*;
@@ -18,17 +18,19 @@ const PULSE_PERIOD_MINUTES: i64 = 1;
 
 enum EitherSigner {
   Hsm(biab_utils::HsmSigner),
-  Ring(twine::twine_builder::RingSigner),
+  Ring(twine_protocol::twine_builder::RingSigner),
 }
 
-impl twine::twine_builder::Signer for EitherSigner {
+impl twine_protocol::twine_builder::Signer for EitherSigner {
   type Key = PublicKey;
 
   fn sign<T: AsRef<[u8]>>(
     &self,
     data: T,
-  ) -> std::result::Result<twine::twine_core::crypto::Signature, SigningError>
-  {
+  ) -> std::result::Result<
+    twine_protocol::twine_lib::crypto::Signature,
+    SigningError,
+  > {
     let _data = data.as_ref();
     match self {
       EitherSigner::Hsm(signer) => signer.sign(_data),
@@ -61,7 +63,7 @@ async fn main() -> Result<()> {
   tokio::spawn(handle_shutdown_signal(shutdown.clone()));
 
   let strand_path = env::var("STRAND_JSON_PATH")?;
-  // let store = twine::twine_core::store::MemoryStore::new();
+  // let store = twine_protocol::twine_lib::store::MemoryStore::new();
   let strand = retrieve_or_create_strand(get_signer()?, &strand_path).await?;
 
   let store =
@@ -99,10 +101,10 @@ fn get_hsm_signer() -> Result<biab_utils::HsmSigner> {
   Ok(signer)
 }
 
-fn get_ring_signer() -> Result<twine::twine_builder::RingSigner> {
+fn get_ring_signer() -> Result<twine_protocol::twine_builder::RingSigner> {
   let key_path = env::var("PRIVATE_KEY_PATH")?;
   let pem = std::fs::read_to_string(key_path)?;
-  let signer = twine::twine_builder::RingSigner::from_pem(pem)?;
+  let signer = twine_protocol::twine_builder::RingSigner::from_pem(pem)?;
   Ok(signer)
 }
 
@@ -133,7 +135,7 @@ async fn create_strand<S: Signer<Key = PublicKey>>(
   let builder = TwineBuilder::new(signer);
   let cfg = std::fs::read_to_string(env::var("STRAND_CONFIG_PATH")?)?;
   let cfg: StrandConfig =
-    twine::twine_core::serde_ipld_dagjson::from_slice(cfg.as_bytes())?;
+    twine_protocol::twine_lib::serde_ipld_dagjson::from_slice(cfg.as_bytes())?;
 
   let details = StrandDetails {
     rng_details: twine_spec_rng::RngStrandDetails {

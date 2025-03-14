@@ -1,7 +1,7 @@
 use rsa::pkcs1::EncodeRsaPublicKey;
-use twine::prelude::*;
-use twine::twine_core::crypto::Signature;
-use twine::{twine_builder::Signer, twine_core::crypto::PublicKey};
+use twine_protocol::prelude::*;
+use twine_protocol::twine_lib::crypto::Signature;
+use twine_protocol::{twine_builder::Signer, twine_lib::crypto::PublicKey};
 use yubihsm::object::Type;
 use yubihsm::{asymmetric::Algorithm, Client};
 
@@ -25,7 +25,7 @@ fn get_public_key(
   ))?;
   let signing_alg = match alg {
     Algorithm::Rsa2048 => {
-      twine::twine_core::crypto::SignatureAlgorithm::Sha256Rsa(2048)
+      twine_protocol::twine_lib::crypto::SignatureAlgorithm::Sha256Rsa(2048)
     }
     _ => {
       return Err(anyhow::anyhow!("Unsupported key type. Found: {:?}", alg));

@@ -2,9 +2,9 @@ use anyhow::Result;
 use chrono::Duration;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
-use twine::{
+use twine_protocol::{
   prelude::*,
-  twine_core::{crypto::PublicKey, twine::CrossStitches},
+  twine_lib::{crypto::PublicKey, twine::CrossStitches},
 };
 
 use twine_spec_rng::{PayloadBuilder, RandomnessPayload, RngStrandDetails};

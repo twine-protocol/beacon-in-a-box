@@ -8,14 +8,13 @@ name = "http_portal"
 path = "src/main.rs"
 
 [dependencies]
-twine = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "dab681d0fa3a00a34a280fc77955ba9f28b81b16", features = ["build", "rsa"] }
-twine_http_store =  { git = "https://github.com/twine-protocol/twine-rs.git", rev = "dab681d0fa3a00a34a280fc77955ba9f28b81b16", package = "twine_http_store" }
-twine_sql_store = { git = "https://github.com/twine-protocol/twine-rs.git", rev = "dab681d0fa3a00a34a280fc77955ba9f28b81b16", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
-biab_utils = { path = "../biab_utils" }
-tokio = { version = "1.43.0", features = ["full"] }
-warp = "0.3.7"
-futures = "0.3.31"
-log = "0.4.25"
-anyhow = "1.0.44"
-serde = { version = "1.0.130", features = ["derive"] }
+twine_protocol.workspace = true
+twine_sql_store.workspace = true
+biab_utils.workspace = true
+tokio.workspace = true
+futures.workspace = true
+log.workspace = true
+anyhow.workspace = true
+serde.workspace = true
 serde_with = "3.12.0"
+warp = "0.3.7"

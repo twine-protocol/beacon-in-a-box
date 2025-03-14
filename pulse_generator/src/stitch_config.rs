@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use twine::prelude::{Cid, ResolverSetSeries};
-use twine_http_store::v2::HttpStore;
+use twine_protocol::prelude::{Cid, ResolverSetSeries};
+use twine_protocol::twine_http_store::v2::HttpStore;
 
 use crate::cid_str::CidStr;
 
@@ -42,7 +42,7 @@ impl StitchConfig {
     let resolvers = uris
       .iter()
       .map(|uri| {
-        use twine_http_store::reqwest::Client;
+        use twine_protocol::twine_http_store::reqwest::Client;
         HttpStore::new(Client::new()).with_url(uri)
       })
       .collect();
