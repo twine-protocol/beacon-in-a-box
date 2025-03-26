@@ -1709,9 +1709,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.26"
+version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
+checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "md-5"
@@ -3480,9 +3480,9 @@ dependencies = [
 
 [[package]]
 name = "twine_builder"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3714d673450b4dfd5e6280d5d6c806374c1f65018de0657bfded6b74783855cc"
+checksum = "f02f8133f1dde278bb7cedffc74f805d67fe80127c622289b799d8d0f5371019"
 dependencies = [
  "chrono",
  "const-oid",
@@ -3500,9 +3500,9 @@ dependencies = [
 
 [[package]]
 name = "twine_http_store"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4df4075049c22c15137ef676546632c19d4dc8b46cff3aec2eae25684b79cda"
+checksum = "0a7495218827014bf82bf1fb571984a2528f79a45340cb97ce2e77bdba97c5d0"
 dependencies = [
  "async-trait",
  "backon",
@@ -3516,9 +3516,9 @@ dependencies = [
 
 [[package]]
 name = "twine_lib"
-version = "0.1.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e80ca65d8943bce6870724339d584f8e976fca6b2b975975ef9e312f974f7fa"
+checksum = "5d2404713907047cb3c19f67a8fea23356f0d64fffca0ed0a2645d3c47bb3892"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3550,9 +3550,9 @@ dependencies = [
 
 [[package]]
 name = "twine_protocol"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "191da0a52528821d8f3cd978855c15bd0dc53ac5c428df5bc6c76eebd3171607"
+checksum = "fa9f712e43b713bc350b053ad2dca1fa0005bfb3a554d0902709c4c3702a84b0"
 dependencies = [
  "twine_builder",
  "twine_http_store",
@@ -3561,9 +3561,9 @@ dependencies = [
 
 [[package]]
 name = "twine_spec_rng"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23f8697ed138a4e7497cadbe25c4326f1e574f579ff82be97c876dfce61e6fa2"
+checksum = "55f3e3e114b91b602e8dc9225b3971efc0771b21f26d8b34eb62c5c87ab4c0b3"
 dependencies = [
  "chrono",
  "serde",
@@ -3572,9 +3572,9 @@ dependencies = [
 
 [[package]]
 name = "twine_sql_store"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93eb3e75f6f4fbdc6960e715a0c813800223f57e2f320b7717368f822a3849c1"
+checksum = "b917e189291bb79a7ce805e91c5bd5bf6af33d7fb6c616fa1a03e02ffac35012"
 dependencies = [
  "async-trait",
  "futures",

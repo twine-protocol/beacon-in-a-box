@@ -8,13 +8,13 @@ members = [
 ]
 
 [workspace.dependencies]
-twine_protocol = { version = "0.1.0", features = ["build", "rsa", "http"] }
-twine_sql_store = { version = "0.1.0", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
-twine_spec_rng = "0.1.1"
+twine_protocol = { version = "0.1.2", features = ["build", "rsa", "http"] }
+twine_sql_store = { version = "0.1.2", package = "twine_sql_store", features = ["mysql", "runtime-tokio"]}
+twine_spec_rng = "0.1.2"
 biab_utils = { path = "biab_utils" }
 tokio = { version = "1.44.1", features = ["full"] }
 futures = "0.3.31"
-log = "0.4.26"
+log = "0.4.27"
 anyhow = "1.0.97"
 serde = { version = "1.0.219", features = ["derive"] }
 chrono = { version = "0.4.40", features = ["serde"] }
